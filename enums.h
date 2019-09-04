@@ -15,23 +15,42 @@
   https://creativecommons.org/licenses/by-nc/4.0/legalcode
 */
 
-enum GENERATORSTATE
-{
-  OFF,
-  PRIMED0,
-  PRIMED1,
-  ON,
-  OVERLOAD
-};
+#ifndef ENUMS_H
+#define ENUMS_H
 
-enum LIGHTPOSITIONS
+namespace GENERATOR
 {
-  GREEN,
-  RED,
-  WHITE,
-  BLUE1,
-  BLUE2,
-  BLUE3,
-  BLUE4,
-  BLUE5
+  enum STATE
+  {
+    OFF,
+    PRIMED0,
+    PRIMED1,
+    ON,
+    OVERLOAD
+  };
 }
+
+// These are the light positions on the switch register.  The following rules must be followed:
+// 1) The enum must be equivilant to the values 0-7.  I.e., don't try to assigned values to the enums.
+// 2) The blue lights must be in order and consecutive.
+namespace LIGHT
+{
+  enum POSITIONS
+  {
+    GREEN,
+    RED,
+    WHITE,
+    BLUE1,
+    BLUE2,
+    BLUE3,
+    BLUE4,
+    BLUE5
+  };
+
+  enum STATE
+  {
+    ON    = HIGH,
+    OFF   = LOW
+  };
+}
+#endif

@@ -18,7 +18,7 @@
 // Input pins are defined in "pins.h."
 
 // The current state (mode) of the device.
-GENERATORSTATE currentState       = OFF;
+GENERATOR::STATE currentState       = GENERATOR::OFF;
 
 // Stores the last state of the overload button.  This is used to note when the overload button changes
 // state (low to high or high to low).  Since we are using the button as a toggle, we need to know that
@@ -39,26 +39,26 @@ bool overloadActive               = false;
 // Sensor 4 goes LOW: ON (red lights on, white lights on, blue lights SLOW scrolling, green lights off)
 // Sensor 4 is LOW, activating sensor 5 (LOW then HIGH) toggles blues lights from scolling slow to fast and back (toggles between ON and OVERLOAD)
 
-GENERATORSTATE getGeneratorState()
+GENERATOR::STATE getGeneratorState(Configuration* configuration)
 {
   // Start by finding the base state specified by when one of the Cap position sensors goes active.
-  for (int i =  OFF; i <= ON; i++)
+  for (int i =  GENERATOR::OFF; i <= GENERATOR::ON; i++)
   {
-    if (digitalRead(stateInputPins[i]) == LOW)
+    if (digitalRead(configuration->stateInputPins[i]) == LOW)
     {
       // We found the activated sensor, save it and break from the loop.
-      currentState  = (GENERATORSTATE)i;
+      currentState  = (GENERATOR::STATE)i;
       break;
     }
   }
 
   // Check to see if we should toggle the overloadActive status.  The first step is to check
   // to see if the overload button state has changed (high to low or low to high).
-  if (digitalRead(stateInputPins[OVERLOAD]) != lastOverloadButtonState)
+  if (digitalRead(configuration->stateInputPins[GENERATOR::OVERLOAD]) != lastOverloadButtonState)
   {
     // Overload button has changed state.
     // Save the new value.
-    lastOverloadButtonState = digitalRead(stateInputPins[OVERLOAD]);
+    lastOverloadButtonState = digitalRead(configuration->stateInputPins[GENERATOR::OVERLOAD]);
 
     // We only handle the event where the button when from high to low (the button was pressed), the
     // release button event is ignored.
@@ -66,16 +66,16 @@ GENERATORSTATE getGeneratorState()
     {
       // The button is has changed postion and is pressed (went from off to on).
       // Change state if the Cap is in the ON position.  In other states the button has no effect.
-      if (currentState == ON)
+      if (currentState == GENERATOR::ON)
       {
         overloadActive = !overloadActive;
       }
     }
   }
   
-  if (currentState == ON && overloadActive)
+  if (currentState == GENERATOR::ON && overloadActive)
   {
-    currentState = OVERLOAD;
+    currentState = GENERATOR::OVERLOAD;
   }
   else
   {

@@ -15,80 +15,29 @@
   https://creativecommons.org/licenses/by-nc/4.0/legalcode
 */
 
-// Initialize the pins for the top red and green lights, the arm white lights,
-// the front and back rail white lights and the "ready" indicator light.
-void initializeStaticLightPins()
-{
-   pinMode(readyIndicatorPin, OUTPUT);
-   pinMode(greenLightPin, OUTPUT);
-   pinMode(redLightPin, OUTPUT);
-   pinMode(whiteLightPin, OUTPUT);
-}
-
-// Initialize the blue light pins.
-void initializeBlueLightPins()
-{
-  // Set up blue top lights as output pins.
-  for (int i = 0; i < numberOfBlueLights; i++)
-  {
-    pinMode(blueLightPins[i], OUTPUT);
-  }
-
-  // Initialize to off.
-  setBlueLightsState(LOW);
-}
-
-// Inputs for hall effect sensors and overload button.
-void initializeInputPins()
-{
-  // Set all the state pins as input.
-  for (int i = 0; i < numberOfStatePins; i++)
-  {
-    // Set as input (read from them).
-    pinMode(stateInputPins[i], INPUT);
-    
-    // Use internal resistor to pull pin to high.  They are pulled low to indicate
-    // activation.
-    digitalWrite(stateInputPins[i], HIGH);
-  }
-
-  // Battery sensor.  We need it low to detect voltage above ground as battery level.
-  pinMode(batterySensePin, INPUT);
-  pinMode(batterySensePin, LOW);
-}
-
 // Do a cool startup.
-void startupSequence()
+void startupSequence(NaquadahGenerator* naquadahGenerator)
 {
   // Forwards on the blue lights.
-  for (int i = 0; i < numberOfBlueLights; i++)
-  {
-    delay(startUpDelay);
-    digitalWrite(blueLightPins[i], HIGH);
-  }
+  naquadahGenerator->rampBlueLightsOn(configuration.startUpDelay);
 
-  delay(2*startUpDelay);
-  digitalWrite(greenLightPin, HIGH);
-  digitalWrite(redLightPin, HIGH);
+  delay(2*configuration.startUpDelay);
+  naquadahGenerator->greenLightsOn();
+  naquadahGenerator->redLightsOn();
 
-  delay(2*startUpDelay);
-  digitalWrite(whiteLightPin, HIGH);
+  delay(2*configuration.startUpDelay);
+  naquadahGenerator->whiteLightsOn();
 
   // Pause with all the lights on.
-  delay(12*startUpDelay);
+  delay(12*configuration.startUpDelay);
   
-  digitalWrite(whiteLightPin, LOW);
+  naquadahGenerator->whiteLightsOff();
 
-  delay(2*startUpDelay);
-  digitalWrite(greenLightPin, LOW);
-  digitalWrite(redLightPin, LOW);
-
-  delay(startUpDelay);
+  delay(2*configuration.startUpDelay);
+  naquadahGenerator->greenLightsOff();
+  naquadahGenerator->redLightsOff();
 
   // Backwards on the blue lights.
-  for (int i = numberOfBlueLights; i > -1 ; i--)
-  {
-    delay(startUpDelay);
-    digitalWrite(blueLightPins[i], LOW);
-  }
+  delay(configuration.startUpDelay);
+  naquadahGenerator->rampBlueLightsOff(configuration.startUpDelay);
 }
