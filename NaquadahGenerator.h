@@ -21,8 +21,10 @@
 #include <Arduino.h>
 #include "enums.h"
 #include "configuration.h"
-#include <ShiftRegister.h>
+#include <ShiftRegister74HC595.h>
 #include <BatteryMeterShiftRegister.h>
+#include <ToggleButton.h>
+#include <SoftTimers.h>
 
 class NaquadahGenerator
 {
@@ -38,7 +40,8 @@ class NaquadahGenerator
 
   // Public interface.
   public:
-    void setState(GENERATOR::STATE state);
+    // Run this in the loop to update all the lights and controls.
+    void update();
 
   // Light control functions.
   public:
@@ -52,7 +55,7 @@ class NaquadahGenerator
     void whiteLightsOff();
 
     void blueLightsOff();
-    void incrementCurrentBlueLight(GENERATOR::STATE currentState);
+    void incrementCurrentBlueLight();
     void rampBlueLightsOn(unsigned int delayBetweenLights);
     void rampBlueLightsOff(unsigned int delayBetweenLights);
     
@@ -61,18 +64,25 @@ class NaquadahGenerator
     void initializeInputPins();
     void initializeBatteryMeter();
 
-    void reset();
+    void reset(bool resetBlueLights);
+
+    GENERATOR::STATE getGeneratorState();
+
+    void setGeneratorState(GENERATOR::STATE state);
    
     
   private:
     // Arduino pin and control settings.
-    Configuration*                   _configuration;
+    Configuration*                  _configuration;
     
     // Main light output.
-    ShiftRegister                   _lightsShiftRegister;
+    ShiftRegister74HC595            _lightsShiftRegister;
 
     // Battery meter.
     BatteryMeterShiftRegister       _batteryMeter;
+
+    // Overload virtual toggle button.
+    ToggleButton                    _overloadButton;
 
     GENERATOR::STATE                _generatorState;
 
@@ -81,6 +91,9 @@ class NaquadahGenerator
     
     // Variable to hold current delay we are using.  We set it to either standard or overload timing.
     unsigned int                    _blueLightDelay;
+
+    // Timer used to determine when to update blue lights and without blocking code execution with "delay."
+    SoftTimer                       _blueLightTimer;
 };
 
 #endif

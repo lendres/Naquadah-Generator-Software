@@ -14,25 +14,33 @@
 
   https://creativecommons.org/licenses/by-nc/4.0/legalcode
 */
-//
+
+/*
+  You must have the following libraries to run this software.
+
+  Bounce2 by Thomas Ouellet Fredericks, et al.
+    - Can be installed from Arduino IDE Library Manager.
+    - https://github.com/thomasfredericks/Bounce2
+
+  SoftTimers by Antoine Beauchamp
+    - Be careful to get the right library, there are several timer libraries and even more than one "SoftTimer" library.
+    - Can be installed from Arduino IDE Library Manager.
+    - https://github.com/end2endzone/SoftTimers
+
+  ShiftRegister74HC595 by Timo Denk
+    - Can be installed from Arduino IDE Library Manager.
+    - https://shiftregister.simsso.de
+
+  
+*/
+
+
 #include "enums.h"
-
 #include "configuration.h"
-
 #include "NaquadahGenerator.h"
 
-//#include <ShiftRegister.h>
-//#include <BatteryMeterShiftRegister.h>
-
-
-Configuration configuration;
-
+Configuration     configuration;
 NaquadahGenerator naquadahGenerator(&configuration);
-
-// GET RID OF
-int currentBlueLight              = 0;
-//ShiftRegister lightsShiftRegister(8, switchRegisterDataPin, switchRegisterClockPin, switchRegisterLatchPin);
-//BatteryMeterShiftRegister batteryMeter(lightsShiftRegister, 552, 865, DEBUG);
 
 // Setup function.
 void setup()
@@ -41,10 +49,6 @@ void setup()
   {
     Serial.begin(9600);
   }
-  
-
-  // Make sure we start with all lights off.
-//  lightsShiftRegister.setAllLow();
 
   // Run startup sequence.  A light display just for the fun of it.
   startupSequence(&naquadahGenerator);
@@ -56,25 +60,6 @@ void setup()
 // Main loop.
 void loop()
 {
-  // The logic for determining which state we are in is separated from the logic for behavior.  This keeps
-  // things a lot cleaner.  There is a small cost associated with this, but nothing significant.
-  GENERATOR::STATE currentState = getGeneratorState(&configuration);
-
   // Set the red, green, and white lights.
-  naquadahGenerator.setState(currentState);
-
-
-
-  // If we are off, we will check to see if we are to display the battery level.   We don't need to do anything,
-  // the battery meter will do it.  We just need an additional check to make sure we are in the OFF state.  We
-  // don't want the battery check button to work otherwise.
-  if (currentState == GENERATOR::OFF)
-  {
-    Serial.println("Battery check");
-//    batteryMeter.runBatteryMeter();
-  }
-
-  // Pause by the length of delay between blue light scrolling.  This could be improved by scanning inputs as fast
-  // as possible and only incrementing the blue lights once a timer has elapsed.
-//  delay(blueLightDelay);
+  naquadahGenerator.update();
 }

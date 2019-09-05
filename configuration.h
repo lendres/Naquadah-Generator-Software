@@ -19,26 +19,28 @@
 
 struct Configuration
 {
+  // If true (1) debugging messages are printed.
   const int Debug                     = 1;
+
+  // Just set the input pins the 4 hall effect sensors and overload push button is
+  // on.  The number of state pins should not be changed.  If an overload button is
+  // not used, just use a pull up resistor to keep that pin high and it will be ignored.
   const int numberOfStatePins         = 5;
   const int* stateInputPins           = new int[5] {3, 4, 5, 6, 2};
   
-  const int switchRegisterDataPin   = 16;
-  const int switchRegisterClockPin  = 14;
-  const int switchRegisterLatchPin  = 15;
-  
-  // Blue top lights.
-  const int numberOfBlueLights      = 5;
+  const int shiftRegisterDataPin      = 16;
+  const int shiftRegisterClockPin     = 14;
+  const int shiftRegisterLatchPin     = 15;
   
    // Green indicator light to indicate Arduino is ready.
-  const int readyIndicatorPin       = 12;
+  const int readyIndicatorPin         = 12;
   
   // Battery meter.
-  unsigned int batteryMeterPin      = 1;
-  unsigned int batterySensePin      = A3;
+  unsigned int batteryMeterPin        = 1;
+  unsigned int batterySensePin        = A3;
   // Set the min and max reading values that correspond to 2.7 and 4.2 volts (for a lithium battery).
-  unsigned int batteryMinReading    = 552;
-  unsigned int batteryMaxReading    = 865;
+  unsigned int batteryMinReading      = 552;
+  unsigned int batteryMaxReading      = 865;
   
   // Values for timing.
   const unsigned int blueLightStandardDelay  = 120;
