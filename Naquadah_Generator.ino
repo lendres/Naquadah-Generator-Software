@@ -31,7 +31,17 @@
     - Can be installed from Arduino IDE Library Manager.
     - https://shiftregister.simsso.de
 
-  
+  BatteryMeter by Lance A. Endres
+    - If you recieved this code as part of an archive (zip) it should have been included.
+    - https://github.com/lendres/Arduino-BatteryMeter
+
+  BatteryMeterShiftRegister by Lance A. Endres
+    - If you recieved this code as part of an archive (zip) it should have been included.
+    - https://github.com/lendres/Arduino-BatteryMeterShiftRegister
+
+  ToggleButton by Lance A. Endres
+    - If you recieved this code as part of an archive (zip) it should have been included.
+    - https://github.com/lendres/Arduino-ToggleButton
 */
 
 
