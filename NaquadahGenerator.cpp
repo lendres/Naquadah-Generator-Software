@@ -50,7 +50,7 @@ void NaquadahGenerator::update()
       // If the off state, we have to have the battery meter monitor the metering button and updating
       // the blue lights accordningly.  This will also allow it to respond if the power level drops while
       // holding the button down.
-      _batteryMeter.runBatteryMeter();
+      _batteryMeter.update();
       break;
 
     case GENERATOR::PRIMED0:
