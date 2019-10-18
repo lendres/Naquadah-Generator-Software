@@ -49,8 +49,11 @@
 #include "configuration.h"
 #include "NaquadahGenerator.h"
 
-Configuration     configuration;
-NaquadahGenerator naquadahGenerator(&configuration);
+#include <ShiftRegister74HC595.h>
+
+Configuration       configuration;
+//NaquadahGenerator   naquadahGenerator(&configuration);
+NaquadahGenerator*   naquadahGenerator;
 
 // Setup function.
 void setup()
@@ -58,18 +61,17 @@ void setup()
   if (configuration.Debug)
   {
     Serial.begin(9600);
+    Serial.println("Naquadah Generator debuging on.");
   }
 
-  // Run startup sequence.  A light display just for the fun of it.
-  startupSequence(&naquadahGenerator);
+  naquadahGenerator = new NaquadahGenerator(&configuration);
 
-  // All ready, turn on "ready" indicator light.
-  digitalWrite(configuration.readyIndicatorPin, HIGH);
+  naquadahGenerator->begin();
 }
 
 // Main loop.
 void loop()
 {
   // Set the red, green, and white lights.
-  naquadahGenerator.update();
+  naquadahGenerator->update();
 }

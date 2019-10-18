@@ -40,8 +40,13 @@ class NaquadahGenerator
 
   // Public interface.
   public:
+    // Initialization.
+    void begin();
+    
     // Run this in the loop to update all the lights and controls.
     void update();
+
+    Configuration* getConfiguration();
 
   // Light control functions.
   public:
@@ -58,10 +63,17 @@ class NaquadahGenerator
     void incrementCurrentBlueLight();
     void rampBlueLightsOn(unsigned int delayBetweenLights);
     void rampBlueLightsOff(unsigned int delayBetweenLights);
+
+    void rampUpAllLights();
+    void rampDownAllLights();
+
+    void startupSequence();
+    void specialModeOne();
+    void specialModeTwo();
     
   private:
     // Initialization functions.
-    void initializeInputPins();
+    void initializePins();
     void initializeBatteryMeter();
 
     void reset(bool resetBlueLights);
@@ -81,8 +93,12 @@ class NaquadahGenerator
     // Battery meter.
     BatteryMeterShiftRegister       _batteryMeter;
 
-    // Overload virtual toggle button.
+    // Virtual toggle button for overload mode.
     ToggleButton                    _overloadButton;
+
+    // Virtual toggle button for special mode 1.
+    ToggleButton                    _specialModeButton1;
+    ToggleButton                    _specialModeButton2;
 
     GENERATOR::STATE                _generatorState;
 

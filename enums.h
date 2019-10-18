@@ -26,7 +26,9 @@ namespace GENERATOR
     PRIMED0,
     PRIMED1,
     ON,
-    OVERLOAD
+    OVERLOAD,
+    SPECIALMODE1,
+    SPECIALMODE2
   };
 }
 
@@ -47,10 +49,10 @@ namespace LIGHT
     BLUE5
   };
 
-  enum STATE
+  enum STATE : uint8_t
   {
-    ON    = HIGH,
-    OFF   = LOW
+    OFF   = LOW,
+    ON    = HIGH
   };
 }
 #endif
