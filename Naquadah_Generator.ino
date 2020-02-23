@@ -58,7 +58,7 @@ NaquadahGenerator*   naquadahGenerator;
 // Setup function.
 void setup()
 {
-  if (configuration.Debug)
+  if (configuration.DebugLevel > DEBUG::OFF)
   {
     Serial.begin(9600);
     Serial.println("Naquadah Generator debuging on.");

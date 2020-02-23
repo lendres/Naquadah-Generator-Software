@@ -81,6 +81,14 @@ class NaquadahGenerator
     GENERATOR::STATE getGeneratorState();
 
     void setGeneratorState(GENERATOR::STATE state);
+
+    void activateChargerKey();
+
+    void debugPrint(char message[], DEBUG::DEBUGLEVEL level);
+    void debugPrint(int message, DEBUG::DEBUGLEVEL level);
+    
+    void debugPrintLn(char message[], DEBUG::DEBUGLEVEL level);
+    void debugPrintLn(int message, DEBUG::DEBUGLEVEL level);
    
     
   private:
@@ -110,6 +118,10 @@ class NaquadahGenerator
 
     // Timer used to determine when to update blue lights and without blocking code execution with "delay."
     SoftTimer                       _blueLightTimer;
+
+    // Timer used to keep charger/booster active, if required.
+    SoftTimer                       _chargerKeyTimer;
+    bool                            _chargerKeyActive;
 };
 
 #endif

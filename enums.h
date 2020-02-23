@@ -55,4 +55,15 @@ namespace LIGHT
     ON    = HIGH
   };
 }
+
+namespace DEBUG
+{
+  enum DEBUGLEVEL
+  {
+    OFF,
+    STANDARD,
+    VERBOSE
+  };
+}
+
 #endif

@@ -21,16 +21,21 @@
 NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
   _configuration(configuration),
   _lightsShiftRegister(8, _configuration->shiftRegisterDataPin, _configuration->shiftRegisterClockPin, _configuration->shiftRegisterLatchPin),
-  _batteryMeter(&_lightsShiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading, _configuration->Debug),
+  _batteryMeter(&_lightsShiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading, _configuration->DebugLevel > DEBUG::OFF),
   _overloadButton(_configuration->stateInputPins[GENERATOR::OVERLOAD]),
   _specialModeButton1(_configuration->stateInputPins[GENERATOR::SPECIALMODE1]),
   _specialModeButton2(_configuration->stateInputPins[GENERATOR::SPECIALMODE2]),
   _generatorState(GENERATOR::STATE::OFF),
   _currentBlueLight(0),
-  _blueLightDelay(_configuration->blueLightStandardDelay)
+  _blueLightDelay(_configuration->blueLightStandardDelay),
+  _chargerKeyActive(false)
 {
   initializePins();
   initializeBatteryMeter();
+
+  // Setup charger activation button timer.
+  _chargerKeyTimer.setTimeOutTime(_configuration->chargerKeyDelay);
+  _chargerKeyTimer.reset();
 }
 
 NaquadahGenerator::~NaquadahGenerator()
@@ -40,30 +45,35 @@ NaquadahGenerator::~NaquadahGenerator()
 void NaquadahGenerator::begin()
 {
   // Run startup sequence.  A light display just for the fun of it.
-  startupSequence();
-  
+  if (_configuration->runStartUpSequence)
+  {
+    startupSequence();
+  }
+
   // Initial state.  Just to make sure.
   setGeneratorState(GENERATOR::OFF);
 
   // All ready, turn on "ready" indicator light.
   digitalWrite(_configuration->readyIndicatorPin, HIGH);
-  
-  if (_configuration->Debug)
-  {
-    Serial.println("Generator state initialized.");
-  }
+
+  debugPrintLn("Generator state initialized.", DEBUG::STANDARD);
 }
 
 // This is the main loop.  We keep it at light as possible by only updating when necessary.
 void NaquadahGenerator::update()
 {
+  // Check the current state.
   GENERATOR::STATE newState = getGeneratorState();
-  
+
+  // If the current state is different than the set one, we update everything.  Otherwise, we
+  // don't update to save time.
   if (newState != _generatorState)
   {
     setGeneratorState(newState);
   }
 
+  // The setGeneratorState function will do most of the work, but there are some special cases we
+  // need to check.
   switch (_generatorState)
   {
     case GENERATOR::OFF:
@@ -79,8 +89,8 @@ void NaquadahGenerator::update()
      
     case GENERATOR::ON:
     case GENERATOR::OVERLOAD:
-      // If the on or overload state we need to be updating the current blue light, but only if we have
-      // passed the elapsed time.  This also resets the timer.
+      // If in the on or overload state we need to be updating the current blue light, but only if we have
+      // passed the elapsed time.  The timer gets reset as part of the increment function.
       if (_blueLightTimer.hasTimedOut())
       {
         incrementCurrentBlueLight();
@@ -93,6 +103,12 @@ void NaquadahGenerator::update()
     case GENERATOR::SPECIALMODE2:
       break;
   }
+
+  // If we need to update the charger key to keep the power on.
+  if (_chargerKeyTimer.hasTimedOut())
+  {
+    activateChargerKey();
+  }
 }
 
 Configuration* NaquadahGenerator::getConfiguration()
@@ -102,14 +118,12 @@ Configuration* NaquadahGenerator::getConfiguration()
 
 void NaquadahGenerator::greenLightsOn()
 {
-  if (_configuration->Debug)
-  {
-    Serial.println("Green lights on.");
-    Serial.print("Pin: ");
-    Serial.println(LIGHT::GREEN);
-    Serial.print("Value: ");
-    Serial.println(LIGHT::ON);
-  }
+  debugPrintLn("Green lights on.", DEBUG::STANDARD);
+  debugPrint("Pin: ", DEBUG::STANDARD);
+  debugPrintLn(LIGHT::GREEN, DEBUG::STANDARD);
+  debugPrint("Value: ", DEBUG::STANDARD);
+  debugPrintLn(LIGHT::ON, DEBUG::STANDARD);
+
   _lightsShiftRegister.set(LIGHT::GREEN, LIGHT::ON);
 }
 
@@ -142,8 +156,12 @@ void NaquadahGenerator::blueLightsOff()
 {
   for (int i = LIGHT::BLUE1; i <= LIGHT::BLUE5; i++)
   {
+    // First set the state for each light.  We don't need to update every
+    // time through the loop, so we use the no update version.
     _lightsShiftRegister.setNoUpdate(i, LIGHT::OFF);
   }
+
+  // The states have been set, so call update now to do the update all at once.
   _lightsShiftRegister.updateRegisters();
 }
 
@@ -260,6 +278,12 @@ void NaquadahGenerator::initializePins()
     // Use internal resistor to pull pin to high.  They are pulled low to indicate activation.
     digitalWrite(_configuration->stateInputPins[i], HIGH);
   }
+
+  // Pin used to keep charger/booster active.
+  if (_configuration->useChargerKey)
+  {
+    pinMode(_configuration->chargerKeyPin, OUTPUT);
+  }
 }
 
 void NaquadahGenerator::initializeBatteryMeter()
@@ -291,6 +315,7 @@ void NaquadahGenerator::reset(bool resetBlueLights)
   _blueLightDelay   = _configuration->blueLightStandardDelay;
   _currentBlueLight = LIGHT::BLUE5;
 
+  // Reset the toggle buttons so the initial state is active (off).
   _overloadButton.reset();
   _specialModeButton1.reset();
   _specialModeButton2.reset();
@@ -335,11 +360,8 @@ GENERATOR::STATE NaquadahGenerator::getGeneratorState()
     }
   }
 
-  if (_configuration->Debug)
-  {
-    Serial.print("Generator state: ");
-    Serial.println(generatorState);
-  }
+  debugPrint("Generator state: ", DEBUG::VERBOSE);
+  debugPrintLn(generatorState, DEBUG::VERBOSE);
 
   return generatorState;
 }
@@ -394,4 +416,65 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
       specialModeTwo();
       break;
   }
+}
+
+void NaquadahGenerator::activateChargerKey()
+{
+  if (_configuration->useChargerKey)
+  {
+    // Debug message.
+    debugPrint("Checking charger key button: ", DEBUG::STANDARD);
+    
+    if (_chargerKeyActive)
+    {
+      debugPrintLn("Disconnect key button.", DEBUG::STANDARD);
+     
+      // Disconnect the key button.
+      digitalWrite(_configuration->chargerKeyPin, LOW);
+      _chargerKeyTimer.setTimeOutTime(_configuration->chargerKeyDelay);
+    }
+    else
+    {
+      debugPrintLn("Connect key button.", DEBUG::STANDARD);
+
+      // Connect the key button.
+      digitalWrite(_configuration->chargerKeyPin, HIGH);
+      _chargerKeyTimer.setTimeOutTime(_configuration->chargerKeyActivationTime);
+    }
+  }
+
+  _chargerKeyTimer.reset();
+  _chargerKeyActive = !_chargerKeyActive;
+}
+
+void NaquadahGenerator::debugPrint(char message[], DEBUG::DEBUGLEVEL level)
+{
+    if (_configuration->DebugLevel >= level)
+    {
+      Serial.print(message);
+    }  
+}
+
+void NaquadahGenerator::debugPrint(int message, DEBUG::DEBUGLEVEL level)
+{
+    if (_configuration->DebugLevel >= level)
+    {
+      Serial.print(message);
+    }  
+}
+
+void NaquadahGenerator::debugPrintLn(char message[], DEBUG::DEBUGLEVEL level)
+{
+    if (_configuration->DebugLevel >= level)
+    {
+      Serial.println(message);
+    }  
+}
+
+void NaquadahGenerator::debugPrintLn(int message, DEBUG::DEBUGLEVEL level)
+{
+    if (_configuration->DebugLevel >= level)
+    {
+      Serial.println(message);
+    }  
 }
