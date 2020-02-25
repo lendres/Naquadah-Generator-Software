@@ -19,12 +19,12 @@
 #define NAQUADAHGENERATOR_H
 
 #include <Arduino.h>
-#include "enums.h"
-#include "configuration.h"
 #include <ShiftRegister74HC595.h>
 #include <BatteryMeterShiftRegister.h>
 #include <ToggleButton.h>
 #include <SoftTimers.h>
+#include "enums.h"
+#include "configuration.h"
 
 class NaquadahGenerator
 {
@@ -84,10 +84,10 @@ class NaquadahGenerator
 
     void activateChargerKey();
 
-    void debugPrint(char message[], DEBUG::DEBUGLEVEL level);
+    void debugPrint(const char message[], DEBUG::DEBUGLEVEL level);
     void debugPrint(int message, DEBUG::DEBUGLEVEL level);
     
-    void debugPrintLn(char message[], DEBUG::DEBUGLEVEL level);
+    void debugPrintLn(const char message[], DEBUG::DEBUGLEVEL level);
     void debugPrintLn(int message, DEBUG::DEBUGLEVEL level);
    
     
@@ -96,10 +96,10 @@ class NaquadahGenerator
     Configuration*                  _configuration;
     
     // Main light output.
-    ShiftRegister74HC595            _lightsShiftRegister;
+    ShiftRegister74HC595<1>         _lightsShiftRegister;
 
     // Battery meter.
-    BatteryMeterShiftRegister       _batteryMeter;
+    BatteryMeterShiftRegister<1>    _batteryMeter;
 
     // Virtual toggle button for overload mode.
     ToggleButton                    _overloadButton;

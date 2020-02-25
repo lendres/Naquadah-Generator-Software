@@ -72,6 +72,6 @@ void setup()
 // Main loop.
 void loop()
 {
-  // Set the red, green, and white lights.
+  // Check the state and update as needed.
   naquadahGenerator->update();
 }

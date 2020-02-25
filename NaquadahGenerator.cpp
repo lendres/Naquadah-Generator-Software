@@ -20,7 +20,7 @@
 
 NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
   _configuration(configuration),
-  _lightsShiftRegister(8, _configuration->shiftRegisterDataPin, _configuration->shiftRegisterClockPin, _configuration->shiftRegisterLatchPin),
+  _lightsShiftRegister(_configuration->shiftRegisterDataPin, _configuration->shiftRegisterClockPin, _configuration->shiftRegisterLatchPin),
   _batteryMeter(&_lightsShiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading, _configuration->DebugLevel > DEBUG::OFF),
   _overloadButton(_configuration->stateInputPins[GENERATOR::OVERLOAD]),
   _specialModeButton1(_configuration->stateInputPins[GENERATOR::SPECIALMODE1]),
@@ -447,7 +447,7 @@ void NaquadahGenerator::activateChargerKey()
   _chargerKeyActive = !_chargerKeyActive;
 }
 
-void NaquadahGenerator::debugPrint(char message[], DEBUG::DEBUGLEVEL level)
+void NaquadahGenerator::debugPrint(const char message[], DEBUG::DEBUGLEVEL level)
 {
     if (_configuration->DebugLevel >= level)
     {
@@ -463,7 +463,7 @@ void NaquadahGenerator::debugPrint(int message, DEBUG::DEBUGLEVEL level)
     }  
 }
 
-void NaquadahGenerator::debugPrintLn(char message[], DEBUG::DEBUGLEVEL level)
+void NaquadahGenerator::debugPrintLn(const char message[], DEBUG::DEBUGLEVEL level)
 {
     if (_configuration->DebugLevel >= level)
     {
