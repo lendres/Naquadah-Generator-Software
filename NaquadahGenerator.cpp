@@ -21,7 +21,7 @@
 NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
   _configuration(configuration),
   _lightsShiftRegister(_configuration->shiftRegisterDataPin, _configuration->shiftRegisterClockPin, _configuration->shiftRegisterLatchPin),
-  _batteryMeter(&_lightsShiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading, _configuration->DebugLevel > DEBUG::OFF),
+  _batteryMeter(&_lightsShiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading),
   _overloadButton(_configuration->stateInputPins[GENERATOR::OVERLOAD]),
   _specialModeButton1(_configuration->stateInputPins[GENERATOR::SPECIALMODE1]),
   _specialModeButton2(_configuration->stateInputPins[GENERATOR::SPECIALMODE2]),
@@ -72,8 +72,8 @@ void NaquadahGenerator::update()
     setGeneratorState(newState);
   }
 
-  // The setGeneratorState function will do most of the work, but there are some special cases we
-  // need to check.
+  // The setGeneratorState function will configure everything when the state changes.  Now we have to handle
+  // the events that need to be updated every loop.
   switch (_generatorState)
   {
     case GENERATOR::OFF:
@@ -98,13 +98,11 @@ void NaquadahGenerator::update()
       break;
 
     case GENERATOR::SPECIALMODE1:
-      break;
-      
     case GENERATOR::SPECIALMODE2:
       break;
   }
 
-  // If we need to update the charger key to keep the power on.
+  // If we need to update the charger key (button) to keep the power on.
   if (_chargerKeyTimer.hasTimedOut())
   {
     activateChargerKey();

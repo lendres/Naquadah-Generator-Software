@@ -33,15 +33,11 @@
 
   BatteryMeter by Lance A. Endres
     - If you recieved this code as part of an archive (zip) it should have been included.
-    - https://github.com/lendres/Arduino-BatteryMeter
+    - https://github.com/lendres/BatteryMeter-Arduino
 
-  BatteryMeterShiftRegister by Lance A. Endres
+  ButtonSuite by Lance A. Endres
     - If you recieved this code as part of an archive (zip) it should have been included.
-    - https://github.com/lendres/Arduino-BatteryMeterShiftRegister
-
-  ToggleButton by Lance A. Endres
-    - If you recieved this code as part of an archive (zip) it should have been included.
-    - https://github.com/lendres/Arduino-ToggleButton
+    - https://github.com/lendres/ButtonSuite-Arduino
 */
 
 
@@ -49,7 +45,11 @@
 #include "configuration.h"
 #include "NaquadahGenerator.h"
 
-#include <ShiftRegister74HC595.h>
+#include "ShiftRegister74HC595.h"
+
+
+#define BATTERYMETERDEBUG
+
 
 Configuration       configuration;
 //NaquadahGenerator   naquadahGenerator(&configuration);
