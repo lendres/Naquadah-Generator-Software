@@ -21,7 +21,7 @@
 #include <Arduino.h>
 #include <ShiftRegister74HC595.h>
 #include <BatteryMeterShiftRegister.h>
-#include <ToggleButton.h>
+#include <CycleButton.h>
 #include <SoftTimers.h>
 #include "enums.h"
 #include "configuration.h"
@@ -50,6 +50,9 @@ class NaquadahGenerator
 
   // Light control functions.
   public:
+    void readyIndicatorLightOn();
+    void readyIndicatorLightOff();
+
     void greenLightsOn();
     void greenLightsOff();
 
@@ -68,8 +71,7 @@ class NaquadahGenerator
     void rampDownAllLights();
 
     void startupSequence();
-    void specialModeOne();
-    void specialModeTwo();
+    void setSpecialMode(GENERATOR::SPECIALMODE specialMode);
     
   private:
     // Initialization functions.
@@ -77,6 +79,8 @@ class NaquadahGenerator
     void initializeBatteryMeter();
 
     void reset(bool resetBlueLights);
+    void resetControls();
+    void resetLights(bool resetBlueLights);
 
     GENERATOR::STATE getGeneratorState();
 
@@ -101,25 +105,25 @@ class NaquadahGenerator
     // Battery meter.
     BatteryMeterShiftRegister<1>    _batteryMeter;
 
-    // Virtual toggle button for overload mode.
-    ToggleButton                    _overloadButton;
+    // Virtual cycle button for special modes.
+    CycleButton                     _modeButton;
 
-    // Virtual toggle button for special mode 1.
-    ToggleButton                    _specialModeButton1;
-    ToggleButton                    _specialModeButton2;
-
+    // The current state of the generator.  This is the activation arm position.
     GENERATOR::STATE                _generatorState;
+    GENERATOR::SPECIALMODE          _specialMode;
 
     // This is the currently active blue light.  It is used to be able to scroll the lights.
     unsigned int                    _currentBlueLight;
     
-    // Variable to hold current delay we are using.  We set it to either standard or overload timing.
-    unsigned int                    _blueLightDelay;
+    // Variable to hold current delay we are using.  This specifies how often the lights are changed in
+    // modes where you have blinking, scrolling, et cetera lights.
+    unsigned int                    _lightDelay;
 
     // Timer used to determine when to update blue lights and without blocking code execution with "delay."
-    SoftTimer                       _blueLightTimer;
+    SoftTimer                       _lightTimer;
 
-    // Timer used to keep charger/booster active, if required.
+    // Timer used to keep charger/booster active, if required.  Some boards shut off if the power draw
+    // is low.  This is used to keep them on in the GENERATOR::OFF state where power use is low.
     SoftTimer                       _chargerKeyTimer;
     bool                            _chargerKeyActive;
 };

@@ -22,12 +22,10 @@ NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
   _configuration(configuration),
   _lightsShiftRegister(_configuration->shiftRegisterDataPin, _configuration->shiftRegisterClockPin, _configuration->shiftRegisterLatchPin),
   _batteryMeter(&_lightsShiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading),
-  _overloadButton(_configuration->stateInputPins[GENERATOR::OVERLOAD]),
-  _specialModeButton1(_configuration->stateInputPins[GENERATOR::SPECIALMODE1]),
-  _specialModeButton2(_configuration->stateInputPins[GENERATOR::SPECIALMODE2]),
+  _modeButton(_configuration->modeButtonPin, GENERATOR::SPECIALMODE05),
   _generatorState(GENERATOR::STATE::OFF),
   _currentBlueLight(0),
-  _blueLightDelay(_configuration->blueLightStandardDelay),
+  _lightDelay(_configuration->blueLightStandardDelay),
   _chargerKeyActive(false)
 {
   initializePins();
@@ -54,7 +52,7 @@ void NaquadahGenerator::begin()
   setGeneratorState(GENERATOR::OFF);
 
   // All ready, turn on "ready" indicator light.
-  digitalWrite(_configuration->readyIndicatorPin, HIGH);
+  readyIndicatorLightOn();
 
   debugPrintLn("Generator state initialized.", DEBUG::STANDARD);
 }
@@ -77,29 +75,40 @@ void NaquadahGenerator::update()
   switch (_generatorState)
   {
     case GENERATOR::OFF:
-      // If the off state, we have to have the battery meter monitor the metering button and updating
-      // the blue lights accordningly.  This will also allow it to respond if the power level drops while
-      // holding the button down.
-      _batteryMeter.update();
+    {
+      GENERATOR::SPECIALMODE specialMode = (GENERATOR::SPECIALMODE)_modeButton.getValue();
+
+      if (specialMode == GENERATOR::SPECIALMODEOFF)
+      {
+        // In the off state and with the special modes off, we have to have the battery meter monitor update.
+        // This checkes the metering button and updates the blue lights accordingly.
+        // holding the button down.
+        _batteryMeter.update();
+      }
+      else
+      {
+        setSpecialMode(specialMode);
+      }
       break;
+    }
 
     case GENERATOR::PRIMED0:
     case GENERATOR::PRIMED1:
+    {
       break;
-     
+    }
+    
     case GENERATOR::ON:
-    case GENERATOR::OVERLOAD:
+    {
       // If in the on or overload state we need to be updating the current blue light, but only if we have
       // passed the elapsed time.  The timer gets reset as part of the increment function.
-      if (_blueLightTimer.hasTimedOut())
+      if (_lightTimer.hasTimedOut())
       {
         incrementCurrentBlueLight();
       }
       break;
+    }
 
-    case GENERATOR::SPECIALMODE1:
-    case GENERATOR::SPECIALMODE2:
-      break;
   }
 
   // If we need to update the charger key (button) to keep the power on.
@@ -112,6 +121,16 @@ void NaquadahGenerator::update()
 Configuration* NaquadahGenerator::getConfiguration()
 {
   return _configuration;
+}
+
+void NaquadahGenerator::readyIndicatorLightOn()
+{
+  digitalWrite(_configuration->readyIndicatorPin, HIGH);
+}
+
+void NaquadahGenerator::readyIndicatorLightOff()
+{
+  digitalWrite(_configuration->readyIndicatorPin, LOW);
 }
 
 void NaquadahGenerator::greenLightsOn()
@@ -183,8 +202,8 @@ void NaquadahGenerator::incrementCurrentBlueLight()
 
   _lightsShiftRegister.set(_currentBlueLight, LIGHT::ON);
 
-  _blueLightTimer.setTimeOutTime(_blueLightDelay);
-  _blueLightTimer.reset();
+  _lightTimer.setTimeOutTime(_lightDelay);
+  _lightTimer.reset();
 }
 
 void NaquadahGenerator::rampBlueLightsOn(unsigned int delayBetweenLights)
@@ -243,21 +262,48 @@ void NaquadahGenerator::startupSequence()
   rampDownAllLights();
 }
 
-void NaquadahGenerator::specialModeOne()
+void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
 {
-  // All ready, turn on "ready" indicator light.
-  digitalWrite(_configuration->readyIndicatorPin, LOW);
+  switch (specialMode)
+  {
+    case GENERATOR::SPECIALMODEOFF:
+    {
+      reset(true);
+      break;
+    }
 
-  rampUpAllLights();
+    case GENERATOR::SPECIALMODE01:
+    {
+      reset(true);
+      readyIndicatorLightOff();
+      rampUpAllLights();
+      readyIndicatorLightOn();
+      break;
+    }
 
-  // All ready, turn on "ready" indicator light.
-  digitalWrite(_configuration->readyIndicatorPin, HIGH);
-}
+    case GENERATOR::SPECIALMODE02:
+    {
+      reset(true);
+      greenLightsOn();
+      redLightsOn();
+      break;
+    }
 
-void NaquadahGenerator::specialModeTwo()
-{
-  greenLightsOn();
-  redLightsOn();
+    case GENERATOR::SPECIALMODE03:
+    {
+      break;
+    }
+
+    case GENERATOR::SPECIALMODE04:
+    {
+      break;
+    }
+
+    case GENERATOR::SPECIALMODE05:
+    {
+      break;
+    }
+  }
 }
 
 // Inputs for hall effect sensors and overload button.
@@ -265,7 +311,7 @@ void NaquadahGenerator::initializePins()
 {
   // Initialize ready light input pin.
   pinMode(_configuration->readyIndicatorPin, OUTPUT);
-  digitalWrite(_configuration->readyIndicatorPin, LOW);
+  readyIndicatorLightOff();
     
   // Set all the state pins as input.
   for (int i = 0; i < _configuration->numberOfStatePins; i++)
@@ -296,6 +342,25 @@ void NaquadahGenerator::initializeBatteryMeter()
 
 void NaquadahGenerator::reset(bool resetBlueLights)
 {
+  resetLights(resetBlueLights);
+  resetControls();
+}
+
+void NaquadahGenerator::resetControls()
+{
+  // We always want to start with standard delay.  Overload can only be created by first turning to ON, then
+  // pressing the overload button.  We set the current blue light to 5 because we are going to call "increment"
+  // to turn them on and increment with update to BLUE1 before turning on the light.
+  _lightDelay       = _configuration->blueLightStandardDelay;
+  _currentBlueLight = LIGHT::BLUE5;
+
+  // Reset the toggle buttons so the initial state is active (off).
+  _modeButton.reset();
+  _specialMode = GENERATOR::SPECIALMODEOFF;  
+}
+
+void NaquadahGenerator::resetLights(bool resetBlueLights)
+{
   greenLightsOff();
   redLightsOff();
   whiteLightsOff();
@@ -306,17 +371,6 @@ void NaquadahGenerator::reset(bool resetBlueLights)
   {
     blueLightsOff();
   }
-
-  // We always want to start with standard delay.  Overload can only be created by first turning to ON, then
-  // pressing the overload button.  We set the current blue light to 5 because we are going to call "increment"
-  // to turn them on and increment with update to BLUE1 before turning on the light.
-  _blueLightDelay   = _configuration->blueLightStandardDelay;
-  _currentBlueLight = LIGHT::BLUE5;
-
-  // Reset the toggle buttons so the initial state is active (off).
-  _overloadButton.reset();
-  _specialModeButton1.reset();
-  _specialModeButton2.reset();
 }
 
 GENERATOR::STATE NaquadahGenerator::getGeneratorState()
@@ -335,29 +389,6 @@ GENERATOR::STATE NaquadahGenerator::getGeneratorState()
     }
   }
 
-  if (generatorState == GENERATOR::OFF)
-  {
-    // If we are on, we need to check to see if overload is active.
-    if (_specialModeButton1.getState())
-    {
-      generatorState = GENERATOR::SPECIALMODE1;
-    }
-
-    if (_specialModeButton2.getState())
-    {
-      generatorState = GENERATOR::SPECIALMODE2;
-    }
-  }
-  
-  if (generatorState == GENERATOR::ON)
-  {
-    // If we are on, we need to check to see if overload is active.
-    if (_overloadButton.getState())
-    {
-      generatorState = GENERATOR::OVERLOAD;
-    }
-  }
-
   debugPrint("Generator state: ", DEBUG::VERBOSE);
   debugPrintLn(generatorState, DEBUG::VERBOSE);
 
@@ -372,47 +403,39 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
   switch (_generatorState)
   {
     case GENERATOR::OFF:
+    {
       // Blue lights are handled by the battery meter when we are in off mode.  We reset with false
       // as an argument so they are skipped.
       reset(true);
       break;
+    }
       
     case GENERATOR::PRIMED0:
+    {
       reset(true);
       greenLightsOn();
       break;
+    }
       
     case GENERATOR::PRIMED1:
+    {
       reset(true);
       redLightsOn();
       break;
+    }
       
     case GENERATOR::ON:
+    {
       greenLightsOff();
       redLightsOn();
       whiteLightsOn();
-      _blueLightDelay = _configuration->blueLightStandardDelay;
-      _overloadButton.reset();
+      
+      resetControls();
       
       // This will turn on the first light and start the timer.
       incrementCurrentBlueLight();
       break;
-      
-    case GENERATOR::OVERLOAD:
-      greenLightsOff();
-      redLightsOn();
-      whiteLightsOn();
-      // We change the delay and allow it to take effect once the timer times out.
-      _blueLightDelay = _configuration->blueLightOverloadDelay;
-      break;
-
-    case GENERATOR::SPECIALMODE1:
-      specialModeOne();
-      break;
-      
-    case GENERATOR::SPECIALMODE2:
-      specialModeTwo();
-      break;
+    }
   }
 }
 
