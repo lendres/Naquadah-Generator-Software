@@ -71,20 +71,22 @@ class NaquadahGenerator
 		void rampDownAllLights();
 
 		void startupSequence();
-		void setSpecialMode(GENERATOR::SPECIALMODE specialMode);
 		
 	private:
 		// Initialization functions.
 		void initializePins();
 		void initializeBatteryMeter();
 
-		void reset(bool resetBlueLights);
+		void reset();
 		void resetControls();
-		void resetLights(bool resetBlueLights);
+		void resetLights();
 
 		GENERATOR::STATE getGeneratorState();
 
 		void setGeneratorState(GENERATOR::STATE state);
+
+		void setSpecialMode(GENERATOR::SPECIALMODE specialMode);
+		void runSpecialMode();
 
 		void activateChargerKey();
 
@@ -110,7 +112,7 @@ class NaquadahGenerator
 
 		// The current state of the generator.  This is the activation arm position.
 		GENERATOR::STATE                _generatorState;
-		GENERATOR::SPECIALMODE          _specialMode;
+		GENERATOR::SPECIALMODE          _modeButtonValue;
 
 		// This is the currently active blue light.  It is used to be able to scroll the lights.
 		unsigned int                    _currentBlueLight;

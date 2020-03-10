@@ -44,12 +44,9 @@
 #include "enums.h"
 #include "configuration.h"
 #include "NaquadahGenerator.h"
-
 #include "ShiftRegister74HC595.h"
 
-
 #define BATTERYMETERDEBUG
-
 
 Configuration       configuration;
 //NaquadahGenerator   naquadahGenerator(&configuration);

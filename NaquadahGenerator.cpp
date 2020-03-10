@@ -42,6 +42,8 @@ NaquadahGenerator::~NaquadahGenerator()
 
 void NaquadahGenerator::begin()
 {
+	digitalWrite(_configuration->chargerKeyPin, HIGH);
+
 	// Run startup sequence.  A light display just for the fun of it.
 	if (_configuration->runStartUpSequence)
 	{
@@ -76,19 +78,15 @@ void NaquadahGenerator::update()
 	{
 		case GENERATOR::OFF:
 		{
-			GENERATOR::SPECIALMODE specialMode = (GENERATOR::SPECIALMODE)_modeButton.getValue();
+			GENERATOR::SPECIALMODE modeButtonValue = (GENERATOR::SPECIALMODE)_modeButton.getValue();
 
-			if (specialMode == GENERATOR::SPECIALMODEOFF)
+			if (modeButtonValue != _modeButtonValue)
 			{
-				// In the off state and with the special modes off, we have to have the battery meter monitor update.
-				// This checkes the metering button and updates the blue lights accordingly.
-				// holding the button down.
-				_batteryMeter.update();
+				setSpecialMode(modeButtonValue);
 			}
-			else
-			{
-				setSpecialMode(specialMode);
-			}
+
+			void runSpecialMode();
+
 			break;
 		}
 
@@ -100,15 +98,23 @@ void NaquadahGenerator::update()
 		
 		case GENERATOR::ON:
 		{
+			// Look to see if the mode button has been used to change the blue light timing.  This is how we implement "overload" timing of
+			// the lights.  The more you press the button, the faster the lights go, until the maximum value is hit.  After which, the light
+			// timing will reset (because the value return by getValue resets to zero).
+			//
+			// The value is updated with every loop to make sure we capture a button push.  The user won't see an effect until the timer times
+			// out and the lights update with the new timing value.
+			_modeButtonValue = (GENERATOR::SPECIALMODE)_modeButton.getValue();
+
 			// If in the on or overload state we need to be updating the current blue light, but only if we have
 			// passed the elapsed time.  The timer gets reset as part of the increment function.
 			if (_lightTimer.hasTimedOut())
 			{
+				_lightDelay = _configuration->blueLightStandardDelay - _modeButtonValue*_configuration->blueLightOverloadIncrement;
 				incrementCurrentBlueLight();
 			}
 			break;
 		}
-
 	}
 
 	// If we need to update the charger key (button) to keep the power on.
@@ -262,50 +268,6 @@ void NaquadahGenerator::startupSequence()
 	rampDownAllLights();
 }
 
-void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
-{
-	switch (specialMode)
-	{
-		case GENERATOR::SPECIALMODEOFF:
-		{
-			reset(true);
-			break;
-		}
-
-		case GENERATOR::SPECIALMODE01:
-		{
-			reset(true);
-			readyIndicatorLightOff();
-			rampUpAllLights();
-			readyIndicatorLightOn();
-			break;
-		}
-
-		case GENERATOR::SPECIALMODE02:
-		{
-			reset(true);
-			greenLightsOn();
-			redLightsOn();
-			break;
-		}
-
-		case GENERATOR::SPECIALMODE03:
-		{
-			break;
-		}
-
-		case GENERATOR::SPECIALMODE04:
-		{
-			break;
-		}
-
-		case GENERATOR::SPECIALMODE05:
-		{
-			break;
-		}
-	}
-}
-
 // Inputs for hall effect sensors and overload button.
 void NaquadahGenerator::initializePins()
 {
@@ -346,9 +308,9 @@ void NaquadahGenerator::initializeBatteryMeter()
 	_batteryMeter.begin();
 }
 
-void NaquadahGenerator::reset(bool resetBlueLights)
+void NaquadahGenerator::reset()
 {
-	resetLights(resetBlueLights);
+	resetLights();
 	resetControls();
 }
 
@@ -362,26 +324,27 @@ void NaquadahGenerator::resetControls()
 
 	// Reset the toggle buttons so the initial state is active (off).
 	_modeButton.reset();
-	_specialMode = GENERATOR::SPECIALMODEOFF;  
+	_modeButtonValue = GENERATOR::SPECIALMODEOFF;  
 }
 
-void NaquadahGenerator::resetLights(bool resetBlueLights)
+void NaquadahGenerator::resetLights()
 {
 	greenLightsOff();
 	redLightsOff();
 	whiteLightsOff();
-
-	// This is here just to allow us to skip reseting the blue lights in the OFF mode.  The
-	// battery meter will handle the lights in that mode.
-	if (resetBlueLights)
-	{
-		blueLightsOff();
-	}
+	blueLightsOff();
+	readyIndicatorLightOn();
 }
 
 GENERATOR::STATE NaquadahGenerator::getGeneratorState()
 {
-	// Default to current state.  We only change when a new sensor or button is pressed.
+	// This function reads the state sensing pins and determines what the current state is.  This function must NOT set
+	// the value of the member variable (_generatorState).  That gets done in the setGeneratorState function.  Separating
+	// out the two lets us determine if we actually need to change the state (if it stays the same, we do nothing).
+
+	// Default to current state.  We only change when a new sensor or button is pressed.  If a sensor is found to be
+	// in the on state, this will get over written with the new state value.  However, if the control arm is in the process
+	// of moving to another position, no pins will read as on, therefore, we keep the current value.
 	GENERATOR::STATE generatorState = _generatorState;
 	
 	// Start by finding the base state specified by when one of the Cap position sensors goes active.
@@ -406,42 +369,93 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 	// Update our state.
 	_generatorState = state;
 	
+	// For the case of switching between PRIMED1 AND ON, we don't want to turn off the red lights then turn
+	// them back on.  Doing so might cause a flicker.  Therefore, we don't call reset when switching between
+	// those two.
 	switch (_generatorState)
 	{
 		case GENERATOR::OFF:
-		{
-			// Blue lights are handled by the battery meter when we are in off mode.  We reset with false
-			// as an argument so they are skipped.
-			reset(true);
+			reset();
 			break;
-		}
 			
 		case GENERATOR::PRIMED0:
-		{
-			reset(true);
+			reset();
 			greenLightsOn();
 			break;
-		}
 			
 		case GENERATOR::PRIMED1:
-		{
-			reset(true);
+			greenLightsOff();
 			redLightsOn();
+			whiteLightsOff();
+			blueLightsOff();
+
+			resetControls();
 			break;
-		}
 			
 		case GENERATOR::ON:
-		{
 			greenLightsOff();
 			redLightsOn();
 			whiteLightsOn();
-			
+
 			resetControls();
-			
+
 			// This will turn on the first light and start the timer.
 			incrementCurrentBlueLight();
 			break;
-		}
+	}
+}
+
+void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
+{
+	_modeButtonValue = specialMode;
+	reset();
+
+	switch (_modeButtonValue)
+	{
+		case GENERATOR::SPECIALMODEOFF:
+			break;
+
+		case GENERATOR::SPECIALMODE01:
+			readyIndicatorLightOff();
+			rampUpAllLights();
+			readyIndicatorLightOn();
+			break;
+
+		case GENERATOR::SPECIALMODE02:
+			greenLightsOn();
+			redLightsOn();
+			break;
+
+		case GENERATOR::SPECIALMODE03:
+		case GENERATOR::SPECIALMODE04:
+		case GENERATOR::SPECIALMODE05:
+			break;
+	}
+}
+
+void NaquadahGenerator::runSpecialMode()
+{
+	switch (_modeButtonValue)
+	{
+		case GENERATOR::SPECIALMODEOFF:
+			// In the off state and with the special modes off, we have to have the battery meter monitor update.
+			// This checkes the metering button and updates the blue lights accordingly.
+			_batteryMeter.update();
+			break;
+
+		case GENERATOR::SPECIALMODE01:
+			break;
+
+		case GENERATOR::SPECIALMODE02:
+			reset();
+			greenLightsOn();
+			redLightsOn();
+			break;
+
+		case GENERATOR::SPECIALMODE03:
+		case GENERATOR::SPECIALMODE04:
+		case GENERATOR::SPECIALMODE05:
+			break;
 	}
 }
 
