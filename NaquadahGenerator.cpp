@@ -21,7 +21,8 @@
 NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
 	_configuration(configuration),
 	_lightsShiftRegister(_configuration->shiftRegisterDataPin, _configuration->shiftRegisterClockPin, _configuration->shiftRegisterLatchPin),
-	_batteryMeter(&_lightsShiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading),
+	_batteryMeter(&_lightsShiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading, Battery::LEVEL5),
+	_batteryMeterButton(_configuration->batteryMeterActivationPin),
 	_modeButton(_configuration->modeButtonPin, GENERATOR::SPECIALMODE05),
 	_generatorState(GENERATOR::STATE::OFF),
 	_currentBlueLight(0),
@@ -30,10 +31,6 @@ NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
 {
 	initializePins();
 	initializeBatteryMeter();
-
-	// Setup charger activation button timer.
-	_chargerKeyTimer.setTimeOutTime(_configuration->chargerKeyDelay);
-	_chargerKeyTimer.reset();
 }
 
 NaquadahGenerator::~NaquadahGenerator()
@@ -43,12 +40,18 @@ NaquadahGenerator::~NaquadahGenerator()
 void NaquadahGenerator::begin()
 {
 	digitalWrite(_configuration->chargerKeyPin, HIGH);
+	
+	// Setup charger activation button timer.
+	_chargerKeyTimer.setTimeOutTime(_configuration->chargerKeyDelay);
+	_chargerKeyTimer.reset();
+
 
 	// Run startup sequence.  A light display just for the fun of it.
 	if (_configuration->runStartUpSequence)
 	{
 		startupSequence();
 	}
+
 
 	// Initial state.  Just to make sure.
 	setGeneratorState(GENERATOR::OFF);
@@ -299,10 +302,10 @@ void NaquadahGenerator::initializeBatteryMeter()
 
 	// These are the pins that the lights are connected to.
 	unsigned int switchRegisterBlueLightPins[] = {LIGHT::BLUE1, LIGHT::BLUE2, LIGHT::BLUE3, LIGHT::BLUE4, LIGHT::BLUE5};
-	_batteryMeter.setLightPins(switchRegisterBlueLightPins, BatteryMeter::LEVEL5, HIGH);
+	_batteryMeter.setLightPins(switchRegisterBlueLightPins, HIGH);
 
 	// This is the pin used to indicate when the battery meter should run.
-	_batteryMeter.setActivationPin(_configuration->batteryMeterActivationPin, LOW);
+	_batteryMeter.setActivationButton(_batteryMeterButton);
 
 	// Tell the battery meter to initialize.
 	_batteryMeter.begin();

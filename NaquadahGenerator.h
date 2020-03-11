@@ -21,6 +21,7 @@
 #include <Arduino.h>
 #include "ShiftRegister74HC595.h"
 #include "BatteryMeterShiftRegister.h"
+#include "MomentaryButton.h"
 #include "CycleButton.h"
 #include "SoftTimers.h"
 #include "enums.h"
@@ -106,6 +107,7 @@ class NaquadahGenerator
 
 		// Battery meter.
 		BatteryMeterShiftRegister<1>    _batteryMeter;
+		MomentaryButton					_batteryMeterButton;
 
 		// Virtual cycle button for special modes.
 		CycleButton                     _modeButton;
