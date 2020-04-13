@@ -20,17 +20,16 @@
 
 NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
 	_configuration(configuration),
-	_lightsShiftRegister(_configuration->shiftRegisterDataPin, _configuration->shiftRegisterClockPin, _configuration->shiftRegisterLatchPin),
-	_batteryMeter(&_lightsShiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading, Battery::LEVEL5),
+	_shiftRegister(_configuration->shiftRegisterDataPin, _configuration->shiftRegisterClockPin, _configuration->shiftRegisterLatchPin),
+	_batteryMeter(&_shiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading, Battery::LEVEL5),
 	_batteryMeterButton(_configuration->batteryMeterActivationPin),
 	_modeButton(_configuration->modeButtonPin, GENERATOR::SPECIALMODE05),
 	_generatorState(GENERATOR::STATE::OFF),
 	_currentBlueLight(0),
 	_lightDelay(_configuration->blueLightStandardDelay),
-	_chargerKeyActive(false)
+	//_chargerKeyBlinker(&_shiftRegister, OUTPUTS::CHARGER, _configuration->chargerDelays, 2)
+	_chargerKeyBlinker(10, _configuration->chargerDelays, 2)
 {
-	initializePins();
-	initializeBatteryMeter();
 }
 
 NaquadahGenerator::~NaquadahGenerator()
@@ -39,12 +38,33 @@ NaquadahGenerator::~NaquadahGenerator()
 
 void NaquadahGenerator::begin()
 {
-	digitalWrite(_configuration->chargerKeyPin, HIGH);
-	
-	// Setup charger activation button timer.
-	_chargerKeyTimer.setTimeOutTime(_configuration->chargerKeyDelay);
-	_chargerKeyTimer.reset();
+	// Initialize ready light input pin.
+	pinMode(_configuration->readyIndicatorPin, OUTPUT);
 
+	// Pin used to keep charger/booster active.
+	if (_configuration->useChargerKey)
+	{
+		_chargerKeyBlinker.begin();
+		_chargerKeyBlinker.setPins(LOW);
+		delay(_configuration->startupChargerDelay);
+		_chargerKeyBlinker.setPins(HIGH);
+	}
+	
+	// We are going to do some work, so make sure the "ready" indicator light is off.
+	readyIndicatorLightOff();
+
+	// Battery meter initialization.
+	initializeBatteryMeter();
+		
+	// Set all the state pins as input.
+	for (int i = 0; i < GENERATOR::NUMBEROFSTATES; i++)
+	{
+		// Set as input (read from them).
+		pinMode(_configuration->stateInputPins[i], INPUT);
+		
+		// Use internal resistor to pull pin to high.  They are pulled low to indicate activation.
+		digitalWrite(_configuration->stateInputPins[i], HIGH);
+	}
 
 	// Run startup sequence.  A light display just for the fun of it.
 	if (_configuration->runStartUpSequence)
@@ -52,13 +72,13 @@ void NaquadahGenerator::begin()
 		startupSequence();
 	}
 
-
 	// Initial state.  Just to make sure.
 	setGeneratorState(GENERATOR::OFF);
 
 	// All ready, turn on "ready" indicator light.
 	readyIndicatorLightOn();
 
+	// If we are debugging, print that we are ready.
 	debugPrintLn("Generator state initialized.", DEBUG::STANDARD);
 }
 
@@ -88,8 +108,7 @@ void NaquadahGenerator::update()
 				setSpecialMode(modeButtonValue);
 			}
 
-			void runSpecialMode();
-
+			runSpecialMode();
 			break;
 		}
 
@@ -118,12 +137,18 @@ void NaquadahGenerator::update()
 			}
 			break;
 		}
+
+		case GENERATOR::NUMBEROFSTATES:
+		{
+			// Error.
+			debugPrint("Error in update, invalid state reached.", DEBUG::STANDARD);
+			break;
+		}
 	}
 
-	// If we need to update the charger key (button) to keep the power on.
-	if (_chargerKeyTimer.hasTimedOut())
+	if (_configuration->useChargerKey)
 	{
-		activateChargerKey();
+		_chargerKeyBlinker.update();
 	}
 }
 
@@ -144,38 +169,32 @@ void NaquadahGenerator::readyIndicatorLightOff()
 
 void NaquadahGenerator::greenLightsOn()
 {
-	debugPrintLn("Green lights on.", DEBUG::STANDARD);
-	debugPrint("Pin: ", DEBUG::STANDARD);
-	debugPrintLn(LIGHT::GREEN, DEBUG::STANDARD);
-	debugPrint("Value: ", DEBUG::STANDARD);
-	debugPrintLn(LIGHT::ON, DEBUG::STANDARD);
-
-	_lightsShiftRegister.set(LIGHT::GREEN, LIGHT::ON);
+	_shiftRegister.set(LIGHT::GREEN, LIGHT::ON);
 }
 
 void NaquadahGenerator::greenLightsOff()
 {
-	_lightsShiftRegister.set(LIGHT::GREEN, LIGHT::OFF);
+	_shiftRegister.set(LIGHT::GREEN, LIGHT::OFF);
 }
 
 void NaquadahGenerator::redLightsOn()
 {
-	_lightsShiftRegister.set(LIGHT::RED, LIGHT::ON);
+	_shiftRegister.set(LIGHT::RED, LIGHT::ON);
 }
 
 void NaquadahGenerator::redLightsOff()
 {
-	_lightsShiftRegister.set(LIGHT::RED, LIGHT::OFF);
+	_shiftRegister.set(LIGHT::RED, LIGHT::OFF);
 }
 
 void NaquadahGenerator::whiteLightsOn()
 {
-	_lightsShiftRegister.set(LIGHT::WHITE, LIGHT::ON);
+	_shiftRegister.set(LIGHT::WHITE, LIGHT::ON);
 }
 
 void NaquadahGenerator::whiteLightsOff()
 {
-	_lightsShiftRegister.set(LIGHT::WHITE, LIGHT::OFF);
+	_shiftRegister.set(LIGHT::WHITE, LIGHT::OFF);
 }
 
 void NaquadahGenerator::blueLightsOff()
@@ -184,11 +203,11 @@ void NaquadahGenerator::blueLightsOff()
 	{
 		// First set the state for each light.  We don't need to update every
 		// time through the loop, so we use the no update version.
-		_lightsShiftRegister.setNoUpdate(i, LIGHT::OFF);
+		_shiftRegister.setNoUpdate(i, LIGHT::OFF);
 	}
 
 	// The states have been set, so call update now to do the update all at once.
-	_lightsShiftRegister.updateRegisters();
+	_shiftRegister.updateRegisters();
 }
 
 // This does the main work of scrolling the blue lights.  If the lights are on, the current
@@ -196,7 +215,7 @@ void NaquadahGenerator::blueLightsOff()
 void NaquadahGenerator::incrementCurrentBlueLight()
 {
 	// All lights off (start with a clean slate).
-	_lightsShiftRegister.setNoUpdate(_currentBlueLight, LIGHT::OFF);
+	_shiftRegister.setNoUpdate(_currentBlueLight, LIGHT::OFF);
 
 	// Increment the light.
 	// If we are  the last light, reset to the first.
@@ -209,10 +228,19 @@ void NaquadahGenerator::incrementCurrentBlueLight()
 		_currentBlueLight++;
 	}
 
-	_lightsShiftRegister.set(_currentBlueLight, LIGHT::ON);
+	_shiftRegister.set(_currentBlueLight, LIGHT::ON);
 
 	_lightTimer.setTimeOutTime(_lightDelay);
 	_lightTimer.reset();
+}
+
+void NaquadahGenerator::allLightsOff()
+{
+	greenLightsOff();
+	redLightsOff();
+	whiteLightsOff();
+	blueLightsOff();
+	readyIndicatorLightOn();
 }
 
 void NaquadahGenerator::rampBlueLightsOn(unsigned int delayBetweenLights)
@@ -221,7 +249,7 @@ void NaquadahGenerator::rampBlueLightsOn(unsigned int delayBetweenLights)
 	for (int i = LIGHT::BLUE1; i <= LIGHT::BLUE5; i++)
 	{
 		delay(delayBetweenLights);
-		_lightsShiftRegister.set(i, LIGHT::ON);
+		_shiftRegister.set(i, LIGHT::ON);
 	}
 }
 
@@ -230,7 +258,7 @@ void NaquadahGenerator::rampBlueLightsOff(unsigned int delayBetweenLights)
 	for (int i = LIGHT::BLUE5; i >= LIGHT::BLUE1 ; i--)
 	{
 		delay(delayBetweenLights);
-		_lightsShiftRegister.set(i, LIGHT::OFF);
+		_shiftRegister.set(i, LIGHT::OFF);
 	}
 }
 
@@ -271,30 +299,6 @@ void NaquadahGenerator::startupSequence()
 	rampDownAllLights();
 }
 
-// Inputs for hall effect sensors and overload button.
-void NaquadahGenerator::initializePins()
-{
-	// Initialize ready light input pin.
-	pinMode(_configuration->readyIndicatorPin, OUTPUT);
-	readyIndicatorLightOff();
-		
-	// Set all the state pins as input.
-	for (int i = 0; i < _configuration->numberOfStatePins; i++)
-	{
-		// Set as input (read from them).
-		pinMode(_configuration->stateInputPins[i], INPUT);
-		
-		// Use internal resistor to pull pin to high.  They are pulled low to indicate activation.
-		digitalWrite(_configuration->stateInputPins[i], HIGH);
-	}
-
-	// Pin used to keep charger/booster active.
-	if (_configuration->useChargerKey)
-	{
-		pinMode(_configuration->chargerKeyPin, OUTPUT);
-	}
-}
-
 void NaquadahGenerator::initializeBatteryMeter()
 {
 	// This is the pin that is connected to the battery positive termina.
@@ -317,26 +321,23 @@ void NaquadahGenerator::reset()
 	resetControls();
 }
 
-void NaquadahGenerator::resetControls()
+void NaquadahGenerator::resetLights()
 {
+	// Turn off all lights.
+	allLightsOff();
+
 	// We always want to start with standard delay.  Overload can only be created by first turning to ON, then
 	// pressing the overload button.  We set the current blue light to 5 because we are going to call "increment"
 	// to turn them on and increment with update to BLUE1 before turning on the light.
 	_lightDelay       = _configuration->blueLightStandardDelay;
 	_currentBlueLight = LIGHT::BLUE5;
+}
 
+void NaquadahGenerator::resetControls()
+{
 	// Reset the toggle buttons so the initial state is active (off).
 	_modeButton.reset();
 	_modeButtonValue = GENERATOR::SPECIALMODEOFF;  
-}
-
-void NaquadahGenerator::resetLights()
-{
-	greenLightsOff();
-	redLightsOff();
-	whiteLightsOff();
-	blueLightsOff();
-	readyIndicatorLightOn();
 }
 
 GENERATOR::STATE NaquadahGenerator::getGeneratorState()
@@ -351,7 +352,7 @@ GENERATOR::STATE NaquadahGenerator::getGeneratorState()
 	GENERATOR::STATE generatorState = _generatorState;
 	
 	// Start by finding the base state specified by when one of the Cap position sensors goes active.
-	for (int i =  GENERATOR::OFF; i <= GENERATOR::ON; i++)
+	for (int i =  GENERATOR::OFF; i < GENERATOR::NUMBEROFSTATES; i++)
 	{
 		if (digitalRead(_configuration->stateInputPins[i]) == LOW)
 		{
@@ -372,21 +373,26 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 	// Update our state.
 	_generatorState = state;
 	
-	// For the case of switching between PRIMED1 AND ON, we don't want to turn off the red lights then turn
+	// For the case of switching between PRIMED1 and ON, we don't want to turn off the red lights then turn
 	// them back on.  Doing so might cause a flicker.  Therefore, we don't call reset when switching between
 	// those two.
 	switch (_generatorState)
 	{
 		case GENERATOR::OFF:
+		{
 			reset();
 			break;
+		}
 			
 		case GENERATOR::PRIMED0:
+		{
 			reset();
 			greenLightsOn();
 			break;
+		}
 			
 		case GENERATOR::PRIMED1:
+		{
 			greenLightsOff();
 			redLightsOn();
 			whiteLightsOff();
@@ -394,8 +400,10 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 
 			resetControls();
 			break;
+		}
 			
 		case GENERATOR::ON:
+		{
 			greenLightsOff();
 			redLightsOn();
 			whiteLightsOn();
@@ -405,34 +413,52 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 			// This will turn on the first light and start the timer.
 			incrementCurrentBlueLight();
 			break;
+		}
+
+		case GENERATOR::NUMBEROFSTATES:
+		{
+			debugPrint("Error in setGeneratorState, invalid state reached.", DEBUG::STANDARD);
+			break;
+		}
 	}
 }
 
 void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
 {
 	_modeButtonValue = specialMode;
-	reset();
+	resetLights();
+
+	debugPrint("Set special mode: ", DEBUG::STANDARD);
+	debugPrintLn(_modeButtonValue, DEBUG::STANDARD);
 
 	switch (_modeButtonValue)
 	{
 		case GENERATOR::SPECIALMODEOFF:
+		{
 			break;
+		}
 
 		case GENERATOR::SPECIALMODE01:
+		{
 			readyIndicatorLightOff();
 			rampUpAllLights();
 			readyIndicatorLightOn();
 			break;
+		}
 
 		case GENERATOR::SPECIALMODE02:
+		{
 			greenLightsOn();
 			redLightsOn();
 			break;
+		}
 
 		case GENERATOR::SPECIALMODE03:
 		case GENERATOR::SPECIALMODE04:
 		case GENERATOR::SPECIALMODE05:
+		{
 			break;
+		}
 	}
 }
 
@@ -441,54 +467,30 @@ void NaquadahGenerator::runSpecialMode()
 	switch (_modeButtonValue)
 	{
 		case GENERATOR::SPECIALMODEOFF:
+		{
 			// In the off state and with the special modes off, we have to have the battery meter monitor update.
 			// This checkes the metering button and updates the blue lights accordingly.
 			_batteryMeter.update();
 			break;
+		}
 
 		case GENERATOR::SPECIALMODE01:
+		{
 			break;
+		}
 
 		case GENERATOR::SPECIALMODE02:
-			reset();
-			greenLightsOn();
-			redLightsOn();
+		{
 			break;
+		}
 
 		case GENERATOR::SPECIALMODE03:
 		case GENERATOR::SPECIALMODE04:
 		case GENERATOR::SPECIALMODE05:
+		{
 			break;
-	}
-}
-
-void NaquadahGenerator::activateChargerKey()
-{
-	if (_configuration->useChargerKey)
-	{
-		// Debug message.
-		debugPrint("Checking charger key button: ", DEBUG::STANDARD);
-		
-		if (_chargerKeyActive)
-		{
-			debugPrintLn("Disconnect key button.", DEBUG::STANDARD);
-		 
-			// Disconnect the key button.
-			digitalWrite(_configuration->chargerKeyPin, LOW);
-			_chargerKeyTimer.setTimeOutTime(_configuration->chargerKeyDelay);
-		}
-		else
-		{
-			debugPrintLn("Connect key button.", DEBUG::STANDARD);
-
-			// Connect the key button.
-			digitalWrite(_configuration->chargerKeyPin, HIGH);
-			_chargerKeyTimer.setTimeOutTime(_configuration->chargerKeyActivationTime);
 		}
 	}
-
-	_chargerKeyTimer.reset();
-	_chargerKeyActive = !_chargerKeyActive;
 }
 
 void NaquadahGenerator::debugPrint(const char message[], DEBUG::DEBUGLEVEL level)

@@ -19,18 +19,19 @@
 #define NAQUADAHGENERATOR_H
 
 #include <Arduino.h>
+#include "enums.h"
+#include "configuration.h"
 #include "ShiftRegister74HC595.h"
 #include "BatteryMeterShiftRegister.h"
 #include "MomentaryButton.h"
 #include "CycleButton.h"
 #include "SoftTimers.h"
-#include "enums.h"
-#include "configuration.h"
+#include "BlinkShiftRegister.h"
+
+#include "BlinkPin.h"
 
 class NaquadahGenerator
 {
-	private:
-	
 	// Constructors.
 	public:
 		// Default contstructor.
@@ -51,6 +52,7 @@ class NaquadahGenerator
 
 	// Light control functions.
 	public:
+		// Standard on/off/increment (blue lights) lighting control functions.
 		void readyIndicatorLightOn();
 		void readyIndicatorLightOff();
 
@@ -65,6 +67,10 @@ class NaquadahGenerator
 
 		void blueLightsOff();
 		void incrementCurrentBlueLight();
+
+		void allLightsOff();
+
+		// Lights functions for sequences, special modes, et cetera.
 		void rampBlueLightsOn(unsigned int delayBetweenLights);
 		void rampBlueLightsOff(unsigned int delayBetweenLights);
 
@@ -75,61 +81,59 @@ class NaquadahGenerator
 		
 	private:
 		// Initialization functions.
-		void initializePins();
 		void initializeBatteryMeter();
 
+		// Reset functions.
 		void reset();
-		void resetControls();
 		void resetLights();
+		void resetControls();
 
+		// Generator state.
 		GENERATOR::STATE getGeneratorState();
-
 		void setGeneratorState(GENERATOR::STATE state);
 
 		void setSpecialMode(GENERATOR::SPECIALMODE specialMode);
 		void runSpecialMode();
 
-		void activateChargerKey();
-
+		// Debug messages.
 		void debugPrint(const char message[], DEBUG::DEBUGLEVEL level);
 		void debugPrint(int message, DEBUG::DEBUGLEVEL level);
 		
 		void debugPrintLn(const char message[], DEBUG::DEBUGLEVEL level);
 		void debugPrintLn(int message, DEBUG::DEBUGLEVEL level);
-	 
-		
+	 		
 	private:
 		// Arduino pin and control settings.
-		Configuration*                  _configuration;
+		Configuration*										_configuration;
 		
-		// Main light output.
-		ShiftRegister74HC595<1>         _lightsShiftRegister;
+		// Output.  Because of the number of outputs, a shift register is used.
+		ShiftRegister74HC595<nShiftRegisters>				_shiftRegister;
 
 		// Battery meter.
-		BatteryMeterShiftRegister<1>    _batteryMeter;
-		MomentaryButton					_batteryMeterButton;
+		BatteryMeterShiftRegister<nShiftRegisters>			_batteryMeter;
+		MomentaryButton										_batteryMeterButton;
 
 		// Virtual cycle button for special modes.
-		CycleButton                     _modeButton;
+		CycleButton											_modeButton;
+		GENERATOR::SPECIALMODE								_modeButtonValue;
 
 		// The current state of the generator.  This is the activation arm position.
-		GENERATOR::STATE                _generatorState;
-		GENERATOR::SPECIALMODE          _modeButtonValue;
+		GENERATOR::STATE									_generatorState;
 
 		// This is the currently active blue light.  It is used to be able to scroll the lights.
-		unsigned int                    _currentBlueLight;
+		unsigned int										_currentBlueLight;
 		
 		// Variable to hold current delay we are using.  This specifies how often the lights are changed in
 		// modes where you have blinking, scrolling, et cetera lights.
-		unsigned int                    _lightDelay;
+		unsigned int                   						_lightDelay;
 
 		// Timer used to determine when to update blue lights and without blocking code execution with "delay."
-		SoftTimer                       _lightTimer;
+		SoftTimer											_lightTimer;
 
 		// Timer used to keep charger/booster active, if required.  Some boards shut off if the power draw
 		// is low.  This is used to keep them on in the GENERATOR::OFF state where power use is low.
-		SoftTimer                       _chargerKeyTimer;
-		bool                            _chargerKeyActive;
+		//BlinkShiftRegister<nShiftRegisters>					_chargerKeyBlinker;
+		BlinkPin											_chargerKeyBlinker;
 };
 
 #endif

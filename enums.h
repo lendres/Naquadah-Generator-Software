@@ -25,7 +25,8 @@ namespace GENERATOR
 		OFF,
 		PRIMED0,
 		PRIMED1,
-		ON
+		ON,
+		NUMBEROFSTATES
 	};
 
 	enum SPECIALMODE
@@ -39,8 +40,8 @@ namespace GENERATOR
 	};
 }
 
-// These are the light positions on the switch register.  The following rules must be followed:
-// 1) The enum must be equivilant to the values 0-7.  I.e., don't try to assigned values to the enums.
+// These are the light positions on the shift register.  The following rules must be followed:
+// 1) The enum must start at zero and be consecutive.  I.e., don't try to assign values to the enums.
 // 2) The blue lights must be in order and consecutive.
 namespace LIGHT
 {
@@ -53,13 +54,24 @@ namespace LIGHT
 		BLUE2,
 		BLUE3,
 		BLUE4,
-		BLUE5
+		BLUE5,
+		READY
 	};
 
 	enum STATE : uint8_t
 	{
 		OFF   = LOW,
 		ON    = HIGH
+	};
+}
+
+// These are the other (non-light) outputs.  These and the light positions need to be consecutive when
+// using the shift registers for output.
+namespace OUTPUTS
+{
+	enum POSITIONS
+	{
+		CHARGER = LIGHT::READY + 1
 	};
 }
 
