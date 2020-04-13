@@ -51,7 +51,7 @@ struct Configuration
 
 	// Charger pin delays (on/off).
 	unsigned int 				chargerDelays[2]							= {10000, 400};
-	unsigned int				startupChargerDelay							= 2000;
+	unsigned int				startupChargerDelay							= 400;
 
 	// BATTERY METER SETTINGS.
 	// The pin the activation button is on.

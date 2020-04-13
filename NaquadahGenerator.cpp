@@ -27,8 +27,7 @@ NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
 	_generatorState(GENERATOR::STATE::OFF),
 	_currentBlueLight(0),
 	_lightDelay(_configuration->blueLightStandardDelay),
-	//_chargerKeyBlinker(&_shiftRegister, OUTPUTS::CHARGER, _configuration->chargerDelays, 2)
-	_chargerKeyBlinker(10, _configuration->chargerDelays, 2)
+	_chargerKeyBlinker(&_shiftRegister, OUTPUTS::CHARGER, _configuration->chargerDelays, 2)
 {
 }
 
@@ -159,12 +158,12 @@ Configuration* NaquadahGenerator::getConfiguration()
 
 void NaquadahGenerator::readyIndicatorLightOn()
 {
-	digitalWrite(_configuration->readyIndicatorPin, HIGH);
+	_shiftRegister.set(LIGHT::READY, LIGHT::ON);
 }
 
 void NaquadahGenerator::readyIndicatorLightOff()
 {
-	digitalWrite(_configuration->readyIndicatorPin, LOW);
+	_shiftRegister.set(LIGHT::READY, LIGHT::OFF);
 }
 
 void NaquadahGenerator::greenLightsOn()
@@ -232,15 +231,6 @@ void NaquadahGenerator::incrementCurrentBlueLight()
 
 	_lightTimer.setTimeOutTime(_lightDelay);
 	_lightTimer.reset();
-}
-
-void NaquadahGenerator::allLightsOff()
-{
-	greenLightsOff();
-	redLightsOff();
-	whiteLightsOff();
-	blueLightsOff();
-	readyIndicatorLightOn();
 }
 
 void NaquadahGenerator::rampBlueLightsOn(unsigned int delayBetweenLights)
@@ -321,23 +311,26 @@ void NaquadahGenerator::reset()
 	resetControls();
 }
 
-void NaquadahGenerator::resetLights()
+void NaquadahGenerator::resetControls()
 {
-	// Turn off all lights.
-	allLightsOff();
-
 	// We always want to start with standard delay.  Overload can only be created by first turning to ON, then
 	// pressing the overload button.  We set the current blue light to 5 because we are going to call "increment"
 	// to turn them on and increment with update to BLUE1 before turning on the light.
 	_lightDelay       = _configuration->blueLightStandardDelay;
 	_currentBlueLight = LIGHT::BLUE5;
-}
 
-void NaquadahGenerator::resetControls()
-{
 	// Reset the toggle buttons so the initial state is active (off).
 	_modeButton.reset();
 	_modeButtonValue = GENERATOR::SPECIALMODEOFF;  
+}
+
+void NaquadahGenerator::resetLights()
+{
+	greenLightsOff();
+	redLightsOff();
+	whiteLightsOff();
+	blueLightsOff();
+	readyIndicatorLightOn();
 }
 
 GENERATOR::STATE NaquadahGenerator::getGeneratorState()
@@ -425,8 +418,11 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 
 void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
 {
+	debugPrint("Previous mode: ", DEBUG::STANDARD);
+	debugPrintLn(_modeButtonValue, DEBUG::STANDARD);
+
 	_modeButtonValue = specialMode;
-	resetLights();
+	reset();
 
 	debugPrint("Set special mode: ", DEBUG::STANDARD);
 	debugPrintLn(_modeButtonValue, DEBUG::STANDARD);
@@ -464,6 +460,9 @@ void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
 
 void NaquadahGenerator::runSpecialMode()
 {
+	debugPrint("Run special mode: ", DEBUG::STANDARD);
+	debugPrintLn(_modeButtonValue, DEBUG::STANDARD);
+
 	switch (_modeButtonValue)
 	{
 		case GENERATOR::SPECIALMODEOFF:
@@ -481,6 +480,9 @@ void NaquadahGenerator::runSpecialMode()
 
 		case GENERATOR::SPECIALMODE02:
 		{
+			reset();
+			greenLightsOn();
+			redLightsOn();
 			break;
 		}
 
