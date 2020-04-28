@@ -74,7 +74,7 @@ class NaquadahGenerator
 		void rampBlueLightsOn(unsigned int delayBetweenLights);
 		void rampBlueLightsOff(unsigned int delayBetweenLights);
 
-		void rampUpAllLights();
+		void rampUpLights();
 		void rampDownAllLights();
 
 		void startupSequence();

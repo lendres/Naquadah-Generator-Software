@@ -261,14 +261,17 @@ void NaquadahGenerator::rampBlueLightsOff(unsigned int delayBetweenLights)
 	}
 }
 
-void NaquadahGenerator::rampUpAllLights()
+void NaquadahGenerator::rampUpLights()
 {
 	// Forwards on the blue lights.
 	rampBlueLightsOn(_configuration->startUpDelay);
 
 	delay(2*_configuration->startUpDelay);
 	greenLightsOn();
-	redLightsOn();
+
+	// This function is only used when in the "Off" mode.  In this mode, the handle is covering the red
+	// lights, so there is no reason to turn them on.  Save power by leaving them off.
+	//redLightsOn();
 
 	delay(2*_configuration->startUpDelay);
 	whiteLightsOn();
@@ -290,7 +293,7 @@ void NaquadahGenerator::rampDownAllLights()
 // Do a cool startup.
 void NaquadahGenerator::startupSequence()
 {
-	rampUpAllLights();
+	rampUpLights();
 
 	// Pause with all the lights on.
 	delay(12*_configuration->startUpDelay);
@@ -443,7 +446,7 @@ void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
 		case GENERATOR::SPECIALMODE01:
 		{
 			readyIndicatorLightOff();
-			rampUpAllLights();
+			rampUpLights();
 			readyIndicatorLightOn();
 			break;
 		}
@@ -459,6 +462,8 @@ void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
 		case GENERATOR::SPECIALMODE04:
 		case GENERATOR::SPECIALMODE05:
 		{
+			// Test mode only.  Used to test total power draw from all lights.
+			rampUpLights();
 			break;
 		}
 	}
