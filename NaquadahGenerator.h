@@ -84,7 +84,7 @@ class NaquadahGenerator
 		void initializeBatteryMeter();
 
 		// Reset functions.
-		void reset();
+		void resetAll();
 		void resetLights();
 		void resetControls();
 
