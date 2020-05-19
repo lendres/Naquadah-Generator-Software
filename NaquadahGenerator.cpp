@@ -453,17 +453,28 @@ void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
 
 		case GENERATOR::SPECIALMODE02:
 		{
+			rampBlueLightsOn(0.5*_configuration->startUpDelay);
+			break;
+		}
+
+		case GENERATOR::SPECIALMODE03:
+		{
+			whiteLightsOn();
+			break;
+		}
+
+		case GENERATOR::SPECIALMODE04:
+		{
 			greenLightsOn();
 			redLightsOn();
 			break;
 		}
 
-		case GENERATOR::SPECIALMODE03:
-		case GENERATOR::SPECIALMODE04:
 		case GENERATOR::SPECIALMODE05:
 		{
 			// Test mode only.  Used to test total power draw from all lights.
 			rampUpLights();
+			redLightsOn();
 			break;
 		}
 	}
