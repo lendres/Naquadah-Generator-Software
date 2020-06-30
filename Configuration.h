@@ -41,17 +41,17 @@ struct Configuration
 	const int					shiftRegisterLatchPin						= 16;
 	
 	 // Green indicator light to indicate Arduino is ready.
-	const int					readyIndicatorPin          					= 12;
+//	const int					readyIndicatorPin          					= 12;
 
 	// CHARGER/BOOSTER ACTIVATION
 	// Some chargers/boosters power down if you don't draw power from them.  Some have a
 	// button used to power them on.  This is used to activate the button.
-	const bool					useChargerKey								= true;
-	const int					chargerKeyPin								= 10;
+	// const bool					useChargerKey								= false;
+	// const int					chargerKeyPin								= 10;
 
 	// Charger pin delays (on/off).
-	unsigned int 				chargerDelays[2]							= {10000, 400};
-	unsigned int				startupChargerDelay							= 400;
+	// unsigned int 				chargerDelays[2]							= {10000, 400};
+	// unsigned int				startupChargerDelay							= 400;
 
 	// BATTERY METER SETTINGS.
 	// The pin the activation button is on.

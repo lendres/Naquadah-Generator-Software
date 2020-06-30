@@ -26,8 +26,8 @@ NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
 	_modeButton(_configuration->modeButtonPin, GENERATOR::SPECIALMODE05),
 	_generatorState(GENERATOR::STATE::OFF),
 	_currentBlueLight(0),
-	_lightDelay(_configuration->blueLightStandardDelay),
-	_chargerKeyBlinker(&_shiftRegister, OUTPUTS::CHARGER, _configuration->chargerDelays, 2)
+	_lightDelay(_configuration->blueLightStandardDelay)
+// _chargerKeyBlinker(&_shiftRegister, OUTPUTS::CHARGER, _configuration->chargerDelays, 2)
 {
 }
 
@@ -38,16 +38,16 @@ NaquadahGenerator::~NaquadahGenerator()
 void NaquadahGenerator::begin()
 {
 	// Initialize ready light input pin.
-	pinMode(_configuration->readyIndicatorPin, OUTPUT);
+	pinMode(LIGHT::READY, OUTPUT);
 
 	// Pin used to keep charger/booster active.
-	if (_configuration->useChargerKey)
-	{
-		_chargerKeyBlinker.begin();
-		_chargerKeyBlinker.setPins(LOW);
-		delay(_configuration->startupChargerDelay);
-		_chargerKeyBlinker.setPins(HIGH);
-	}
+// if (_configuration->useChargerKey)
+// {
+// 	_chargerKeyBlinker.begin();
+// 	_chargerKeyBlinker.setPins(LOW);
+// 	delay(_configuration->startupChargerDelay);
+// 	_chargerKeyBlinker.setPins(HIGH);
+// }
 	
 	// We are going to do some work, so make sure the "ready" indicator light is off.
 	readyIndicatorLightOff();
@@ -145,10 +145,10 @@ void NaquadahGenerator::update()
 		}
 	}
 
-	if (_configuration->useChargerKey)
-	{
-		_chargerKeyBlinker.update();
-	}
+// 	if (_configuration->useChargerKey)
+// 	{
+// 		_chargerKeyBlinker.update();
+// 	}
 }
 
 Configuration* NaquadahGenerator::getConfiguration()
@@ -158,12 +158,12 @@ Configuration* NaquadahGenerator::getConfiguration()
 
 void NaquadahGenerator::readyIndicatorLightOn()
 {
-	_shiftRegister.set(LIGHT::READY, LIGHT::ON);
+	digitalWrite(LIGHT::READY, LIGHT::ON);
 }
 
 void NaquadahGenerator::readyIndicatorLightOff()
 {
-	_shiftRegister.set(LIGHT::READY, LIGHT::OFF);
+	digitalWrite(LIGHT::READY, LIGHT::OFF);
 }
 
 void NaquadahGenerator::greenLightsOn()

@@ -45,17 +45,26 @@ namespace GENERATOR
 // 2) The blue lights must be in order and consecutive.
 namespace LIGHT
 {
-	enum POSITIONS
+	// These lights are connected to a shift register.  The value of the enumeration
+	// is the postion on the shift register.
+	enum SHIFTREGISTER
 	{
-		GREEN,
+
 		RED,
-		WHITE,
 		BLUE1,
 		BLUE2,
 		BLUE3,
 		BLUE4,
 		BLUE5,
-		READY
+		WHITE,
+		GREEN
+	};
+
+	// These lights are connected to output pins from the ATMega.  The value of the enum is the
+	// pin number the light is connected to.
+	enum PINS
+	{
+		READY		= 12
 	};
 
 	enum STATE : uint8_t
@@ -67,13 +76,13 @@ namespace LIGHT
 
 // These are the other (non-light) outputs.  These and the light positions need to be consecutive when
 // using the shift registers for output.
-namespace OUTPUTS
-{
-	enum POSITIONS
-	{
-		CHARGER = LIGHT::READY + 1
-	};
-}
+// namespace OUTPUTS
+// {
+// 	enum POSITIONS
+// 	{
+// 		CHARGER = LIGHT::READY + 1
+// 	};
+// }
 
 namespace DEBUG
 {
