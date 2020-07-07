@@ -36,7 +36,9 @@ namespace GENERATOR
 		SPECIALMODE02,
 		SPECIALMODE03,
 		SPECIALMODE04,
-		SPECIALMODE05
+		SPECIALMODE05,
+		SPECIALMODE06,
+		NUMBEROFSPECIALMODES
 	};
 }
 
@@ -58,13 +60,6 @@ namespace LIGHT
 		BLUE5,
 		WHITE,
 		GREEN
-	};
-
-	// These lights are connected to output pins from the ATMega.  The value of the enum is the
-	// pin number the light is connected to.
-	enum PINS
-	{
-		READY		= 12
 	};
 
 	enum STATE : uint8_t

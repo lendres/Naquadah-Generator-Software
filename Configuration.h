@@ -29,19 +29,25 @@ struct Configuration
 	// INPUT.
 	// Just set the input pins the 4 hall effect sensors is on.  The number of state pins
 	// should not be changed.
-	int	const					stateInputPins[GENERATOR::NUMBEROFSTATES]	= {3, 4, 5, 6};
+	int	const					stateInputPins[GENERATOR::NUMBEROFSTATES]	= {A5, A4, A3, A2};
 
 	// The pin the mode button is connected to.
-	const int					modeButtonPin								= 2;
+	const int					modeButtonPin								=  9;
 
-	// OUTPUT.
+	// LIGHTS.
 	// Output shift register pins.
-	const int					shiftRegisterDataPin						= 14;
-	const int					shiftRegisterClockPin						= 15;
-	const int					shiftRegisterLatchPin						= 16;
+	const int					shiftRegisterDataPin						=  4;
+	const int					shiftRegisterClockPin						=  6;
+	const int					shiftRegisterLatchPin						= 12;
 	
 	 // Green indicator light to indicate Arduino is ready.
-//	const int					readyIndicatorPin          					= 12;
+	const int					readyIndicatorPin          					=  8;
+
+	// AUDIO.
+	const int					audioRxPin									=  5;
+	const int					audioTxPin									= 13;
+	const int					audioResetPin								= 10;
+
 
 	// CHARGER/BOOSTER ACTIVATION
 	// Some chargers/boosters power down if you don't draw power from them.  Some have a
@@ -58,7 +64,7 @@ struct Configuration
 	unsigned int				batteryMeterActivationPin					= 7;
 
 	// The pin that is used to sense the battery voltage.
-	unsigned int				batteryMeterSensePin						= A3;
+	unsigned int				batteryMeterSensePin						= A1;
 	
 	// Set the min and max reading values that correspond to 2.7 and 4.2 volts (for a lithium battery).
 	unsigned int				batteryMinReading							= 646;

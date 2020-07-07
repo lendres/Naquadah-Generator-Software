@@ -23,7 +23,7 @@ NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
 	_shiftRegister(_configuration->shiftRegisterDataPin, _configuration->shiftRegisterClockPin, _configuration->shiftRegisterLatchPin),
 	_batteryMeter(&_shiftRegister, _configuration->batteryMinReading, _configuration->batteryMaxReading, Battery::LEVEL5),
 	_batteryMeterButton(_configuration->batteryMeterActivationPin),
-	_modeButton(_configuration->modeButtonPin, GENERATOR::SPECIALMODE05),
+	_modeButton(_configuration->modeButtonPin, GENERATOR::NUMBEROFSPECIALMODES-1),
 	_generatorState(GENERATOR::STATE::OFF),
 	_currentBlueLight(0),
 	_lightDelay(_configuration->blueLightStandardDelay)
@@ -38,7 +38,7 @@ NaquadahGenerator::~NaquadahGenerator()
 void NaquadahGenerator::begin()
 {
 	// Initialize ready light input pin.
-	pinMode(LIGHT::READY, OUTPUT);
+	pinMode(_configuration->readyIndicatorPin, OUTPUT);
 
 	// Pin used to keep charger/booster active.
 // if (_configuration->useChargerKey)
@@ -158,12 +158,12 @@ Configuration* NaquadahGenerator::getConfiguration()
 
 void NaquadahGenerator::readyIndicatorLightOn()
 {
-	digitalWrite(LIGHT::READY, LIGHT::ON);
+	digitalWrite(_configuration->readyIndicatorPin, LIGHT::ON);
 }
 
 void NaquadahGenerator::readyIndicatorLightOff()
 {
-	digitalWrite(LIGHT::READY, LIGHT::OFF);
+	digitalWrite(_configuration->readyIndicatorPin, LIGHT::OFF);
 }
 
 void NaquadahGenerator::greenLightsOn()
@@ -194,6 +194,28 @@ void NaquadahGenerator::whiteLightsOn()
 void NaquadahGenerator::whiteLightsOff()
 {
 	_shiftRegister.set(LIGHT::WHITE, LIGHT::OFF);
+}
+
+void NaquadahGenerator::blueLightsOn(unsigned int numberOfLights)
+{
+	// Number of lights provided has to be between 1 and 5.
+	int lastOnLight = LIGHT::BLUE1 + numberOfLights - 1;
+
+	// First set the state for each light.  We don't need to update every
+	// time through the loop, so we use the no update version.
+	// Set the "on" values.
+	for (int i = LIGHT::BLUE1; i <= lastOnLight; i++)
+	{
+		_shiftRegister.setNoUpdate(i, LIGHT::ON);
+	}
+	// Set the "off" values.
+	for (int i = lastOnLight + 1; i <= LIGHT::BLUE5; i++)
+	{
+		_shiftRegister.setNoUpdate(i, LIGHT::OFF);
+	}
+
+	// The states have been set, so call update now to do the update all at once.
+	_shiftRegister.updateRegisters();
 }
 
 void NaquadahGenerator::blueLightsOff()
@@ -242,6 +264,39 @@ void NaquadahGenerator::allLightsOff()
 	readyIndicatorLightOn();
 }
 
+void NaquadahGenerator::blinkBlueLights(unsigned int numberOfLights)
+{
+	// This is to allow numbers more than 5 to be displayed.  Since we only have 5 blue lights,
+	// we will blink 5 plus the remainder.  I.e., roller over means for than 5.
+	bool rolledOver = false;
+
+	unsigned int lightDelay = _configuration->startUpDelay;
+
+	if (numberOfLights > 5)
+	{
+		rolledOver		= true;
+		numberOfLights	= numberOfLights - 5;
+	}
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (rolledOver)
+		{
+			// All five blue lights on to show the first 5.
+			blueLightsOn(5);
+
+			// Use a short dely to more closely associate the remainder with the first 5.  A longer
+			// delay is used between the groups.
+			delay(lightDelay);
+		}
+
+		delay(lightDelay);
+		blueLightsOn(numberOfLights);
+		delay(lightDelay);
+		blueLightsOff();
+	}
+}
+
 void NaquadahGenerator::rampBlueLightsOn(unsigned int delayBetweenLights)
 {
 	// Forwards on the blue lights.
@@ -261,7 +316,7 @@ void NaquadahGenerator::rampBlueLightsOff(unsigned int delayBetweenLights)
 	}
 }
 
-void NaquadahGenerator::rampUpLights()
+void NaquadahGenerator::rampUpAllLights()
 {
 	// Forwards on the blue lights.
 	rampBlueLightsOn(_configuration->startUpDelay);
@@ -293,7 +348,7 @@ void NaquadahGenerator::rampDownAllLights()
 // Do a cool startup.
 void NaquadahGenerator::startupSequence()
 {
-	rampUpLights();
+	rampUpAllLights();
 
 	// Pause with all the lights on.
 	delay(12*_configuration->startUpDelay);
@@ -436,6 +491,9 @@ void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
 	debugPrint("Set special mode: ", DEBUG::STANDARD);
 	debugPrintLn(_modeButtonValue, DEBUG::STANDARD);
 
+	// Display which special mode we are in by blinking the corresponding number of blue lights.
+	blinkBlueLights(_modeButtonValue);
+
 	switch (_modeButtonValue)
 	{
 		case GENERATOR::SPECIALMODEOFF:
@@ -445,36 +503,54 @@ void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
 
 		case GENERATOR::SPECIALMODE01:
 		{
-			readyIndicatorLightOff();
-			rampUpLights();
-			readyIndicatorLightOn();
+			// This is the battery meter mode.  The battery meter has a timer in it to prevent flickering of the lights.  The update only
+			// runs when the timer times out.  Normally, this works well, however we have a slightly different case.  We need to call
+			// updateNow here to turn the lights on immediately without waiting for the timer.  In runSpecialMode, changes in the battery
+			// level will be handled by the normal update function.
+			_batteryMeter.updateNow();
 			break;
 		}
 
 		case GENERATOR::SPECIALMODE02:
 		{
-			rampBlueLightsOn(0.5*_configuration->startUpDelay);
+			readyIndicatorLightOff();
+			rampUpAllLights();
+			readyIndicatorLightOn();
 			break;
 		}
 
 		case GENERATOR::SPECIALMODE03:
 		{
-			whiteLightsOn();
+			blueLightsOn(5);
 			break;
 		}
 
 		case GENERATOR::SPECIALMODE04:
+		{
+			whiteLightsOn();
+			break;
+		}
+
+		case GENERATOR::SPECIALMODE05:
 		{
 			greenLightsOn();
 			redLightsOn();
 			break;
 		}
 
-		case GENERATOR::SPECIALMODE05:
+		case GENERATOR::SPECIALMODE06:
 		{
 			// Test mode only.  Used to test total power draw from all lights.
-			rampUpLights();
+			rampUpAllLights();
 			redLightsOn();
+			break;
+		}
+
+		case GENERATOR::NUMBEROFSPECIALMODES:
+		{
+			// The last enum is used as a placeholder to determine the total number of enums in the series.  However, the
+			// Arduino IDE likes to complain when you don't handle all enums in the series so we use this to appease it.
+			debugPrint("Error in setSpecialMode, invalid state reached.", DEBUG::STANDARD);
 			break;
 		}
 	}
@@ -489,31 +565,40 @@ void NaquadahGenerator::runSpecialMode()
 	{
 		case GENERATOR::SPECIALMODEOFF:
 		{
-			// In the off state and with the special modes off, we have to have the battery meter monitor update.
-			// This checkes the metering button and updates the blue lights accordingly.
-			_batteryMeter.update();
+
 			break;
 		}
 
 		case GENERATOR::SPECIALMODE01:
 		{
+			// This checkes the metering button and updates the blue lights accordingly.
+			_batteryMeter.update();
 			break;
 		}
 
 		case GENERATOR::SPECIALMODE02:
+		case GENERATOR::SPECIALMODE03:
+		case GENERATOR::SPECIALMODE04:
+		case GENERATOR::SPECIALMODE05:
+		case GENERATOR::SPECIALMODE06:
 		{
 			break;
 		}
 
-		case GENERATOR::SPECIALMODE03:
-		case GENERATOR::SPECIALMODE04:
-		case GENERATOR::SPECIALMODE05:
+		case GENERATOR::NUMBEROFSPECIALMODES:
 		{
+			// The last enum is used as a placeholder to determine the total number of enums in the series.  However, the
+			// Arduino IDE likes to complain when you don't handle all enums in the series so we use this to appease it.
+			debugPrint("Error in runSpecialMode, invalid state reached.", DEBUG::STANDARD);
 			break;
 		}
 	}
 }
 
+void  NaquadahGenerator::triggerAudio()
+{
+}  
+ 
 void NaquadahGenerator::debugPrint(const char message[], DEBUG::DEBUGLEVEL level)
 {
 	if (_configuration->DebugLevel >= level)

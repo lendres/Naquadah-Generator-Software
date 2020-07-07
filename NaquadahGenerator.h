@@ -23,7 +23,7 @@
 #include "configuration.h"
 #include "ShiftRegister74HC595.h"
 #include "BatteryMeterShiftRegister.h"
-#include "MomentaryButton.h"
+#include "AlwaysOnButton.h"
 #include "CycleButton.h"
 #include "SoftTimers.h"
 #include "BlinkShiftRegister.h"
@@ -65,16 +65,19 @@ class NaquadahGenerator
 		void whiteLightsOn();
 		void whiteLightsOff();
 
+		void blueLightsOn(unsigned int numberOfLights);
 		void blueLightsOff();
 		void incrementCurrentBlueLight();
 
 		void allLightsOff();
 
 		// Lights functions for sequences, special modes, et cetera.
+		void blinkBlueLights(unsigned int numberOfLights);
+
 		void rampBlueLightsOn(unsigned int delayBetweenLights);
 		void rampBlueLightsOff(unsigned int delayBetweenLights);
 
-		void rampUpLights();
+		void rampUpAllLights();
 		void rampDownAllLights();
 
 		void startupSequence();
@@ -95,6 +98,9 @@ class NaquadahGenerator
 		void setSpecialMode(GENERATOR::SPECIALMODE specialMode);
 		void runSpecialMode();
 
+		// Audio.
+		void triggerAudio();
+
 		// Debug messages.
 		void debugPrint(const char message[], DEBUG::DEBUGLEVEL level);
 		void debugPrint(int message, DEBUG::DEBUGLEVEL level);
@@ -111,7 +117,7 @@ class NaquadahGenerator
 
 		// Battery meter.
 		BatteryMeterShiftRegister<nShiftRegisters>			_batteryMeter;
-		MomentaryButton										_batteryMeterButton;
+		AlwaysOnButton										_batteryMeterButton;
 
 		// Virtual cycle button for special modes.
 		CycleButton											_modeButton;
