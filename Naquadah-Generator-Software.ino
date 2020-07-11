@@ -33,11 +33,17 @@
 
 	BatteryMeter by Lance A. Endres
 		- If you recieved this code as part of an archive (zip) it should have been included.
+		- Can be installed from Arduino IDE Library Manager.
 		- https://github.com/lendres/BatteryMeter-Arduino
 
 	ButtonSuite by Lance A. Endres
 		- If you recieved this code as part of an archive (zip) it should have been included.
+		- Can be installed from Arduino IDE Library Manager.
 		- https://github.com/lendres/ButtonSuite-Arduino
+
+	VS1000UART by Lance A. Endres
+		- Audio interface modified from the Adafruit Soundboard code.
+		- If you recieved this code as part of an archive (zip) it should have been included.
 */
 
 
