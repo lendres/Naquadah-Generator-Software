@@ -26,7 +26,9 @@ NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
 	_modeButton(_configuration->modeButtonPin, GENERATOR::NUMBEROFSPECIALMODES-1),
 	_generatorState(GENERATOR::STATE::OFF),
 	_currentBlueLight(0),
-	_lightDelay(_configuration->blueLightStandardDelay)
+	_lightDelay(_configuration->blueLightStandardDelay),
+	_audioSerial(_configuration->rxFromAudioTxPin, _configuration->txToAudioRxPin),
+	_vsUart(&_audioSerial, _configuration->audioResetPin)
 // _chargerKeyBlinker(&_shiftRegister, OUTPUTS::CHARGER, _configuration->chargerDelays, 2)
 {
 }
@@ -51,6 +53,24 @@ void NaquadahGenerator::begin()
 	
 	// We are going to do some work, so make sure the "ready" indicator light is off.
 	readyIndicatorLightOff();
+
+	// Audio set up.
+	// Set up the levels we want to use.
+	// This sets the lowest level to 1 instead of 0.
+	_vsUart.useLowerLevelOne(true);
+
+	// Set the maximum level as 5.
+	_vsUart.setMaximumLevel(VS1000UART::VOLUME5);
+
+	// Set the minimum volume used.
+	_vsUart.setMinimumVolume(100);
+	
+	// Set the maximum volume used.
+	_vsUart.setMaximumVolume(204);
+
+	// Audio start up.
+	_audioSerial.begin(9600);
+	_vsUart.begin();
 
 	// Battery meter initialization.
 	initializeBatteryMeter();
@@ -137,7 +157,7 @@ void NaquadahGenerator::update()
 			break;
 		}
 
-		case GENERATOR::NUMBEROFSTATES:
+		default:
 		{
 			// Error.
 			debugPrint("Error in update, invalid state reached.", DEBUG::STANDARD);
@@ -429,6 +449,9 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 {
 	// Update our state.
 	_generatorState = state;
+
+	// The state changes when a hall sensor is trigger, we want to make a sound to go with this event.
+	_vsUart.playFile("ACTIVATEOGG");
 	
 	// For the case of switching between PRIMED1 and ON, we don't want to turn off the red lights then turn
 	// them back on.  Doing so might cause a flicker.  Therefore, we don't call reset when switching between
@@ -469,6 +492,8 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 
 			// This will turn on the first light and start the timer.
 			incrementCurrentBlueLight();
+
+			//_vsUart.playFile(F("ON      OGG"));
 			break;
 		}
 

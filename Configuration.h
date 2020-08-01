@@ -44,8 +44,8 @@ struct Configuration
 	const int					readyIndicatorPin          					=  8;
 
 	// AUDIO.
-	const int					audioRxPin									=  5;
-	const int					audioTxPin									= 13;
+	const int					rxFromAudioTxPin							=  5;
+	const int					txToAudioRxPin								= 13;
 	const int					audioResetPin								= 10;
 
 

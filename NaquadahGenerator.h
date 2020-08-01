@@ -27,8 +27,10 @@
 #include "CycleButton.h"
 #include "SoftTimers.h"
 #include "BlinkShiftRegister.h"
+#include "SoftwareSerial.h"
+#include "VS1000UART.h"
 
-#include "BlinkPin.h"
+//#include "BlinkPin.h"
 
 class NaquadahGenerator
 {
@@ -135,6 +137,10 @@ class NaquadahGenerator
 
 		// Timer used to determine when to update blue lights and without blocking code execution with "delay."
 		SoftTimer											_lightTimer;
+
+		// Audio serial communicator and chip interface class.
+		SoftwareSerial										_audioSerial;
+		VS1000UART 											_vsUart;
 
 		// Timer used to keep charger/booster active, if required.  Some boards shut off if the power draw
 		// is low.  This is used to keep them on in the GENERATOR::OFF state where power use is low.
