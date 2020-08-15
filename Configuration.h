@@ -17,6 +17,8 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
+#include "enums.h"
+
 // Number of shift registers used.
 #define nShiftRegisters 2
 
@@ -73,7 +75,7 @@ struct Configuration
 	// BEHAVIOR SETTINGS.
 	// Values for timing.
 	const unsigned int			blueLightStandardDelay						= 130;
-	const unsigned int			blueLightOverloadIncrement					= 20;
+	const unsigned int			blueLightOverloadIncrement					= 16;
 	const unsigned int			startUpDelay								= 1.5*blueLightStandardDelay;
 
 	// Start up sequence.

@@ -59,7 +59,8 @@ namespace LIGHT
 		BLUE4,
 		BLUE5,
 		WHITE,
-		GREEN
+		GREEN,
+		READY
 	};
 
 	enum STATE : uint8_t
@@ -71,13 +72,16 @@ namespace LIGHT
 
 // These are the other (non-light) outputs.  These and the light positions need to be consecutive when
 // using the shift registers for output.
-// namespace OUTPUTS
-// {
-// 	enum POSITIONS
-// 	{
-// 		CHARGER = LIGHT::READY + 1
-// 	};
-// }
+namespace AUDIO
+{
+	enum SHIFTREGISTER
+	{
+		UG = LIGHT::READY + 1,
+		RESET,
+		STATECHANGE,
+		ON
+	};
+}
 
 namespace DEBUG
 {

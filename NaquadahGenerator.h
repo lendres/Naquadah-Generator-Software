@@ -141,10 +141,6 @@ class NaquadahGenerator
 		// Audio serial communicator and chip interface class.
 		SoftwareSerial										_audioSerial;
 		VS1000UART 											_vsUart;
-
-		// Timer used to keep charger/booster active, if required.  Some boards shut off if the power draw
-		// is low.  This is used to keep them on in the GENERATOR::OFF state where power use is low.
-// BlinkShiftRegister<nShiftRegisters>					_chargerKeyBlinker;
 };
 
 #endif

@@ -29,7 +29,6 @@ NaquadahGenerator::NaquadahGenerator(Configuration* configuration) :
 	_lightDelay(_configuration->blueLightStandardDelay),
 	_audioSerial(_configuration->rxFromAudioTxPin, _configuration->txToAudioRxPin),
 	_vsUart(&_audioSerial, _configuration->audioResetPin)
-// _chargerKeyBlinker(&_shiftRegister, OUTPUTS::CHARGER, _configuration->chargerDelays, 2)
 {
 }
 
@@ -42,17 +41,13 @@ void NaquadahGenerator::begin()
 	// Initialize ready light input pin.
 	pinMode(_configuration->readyIndicatorPin, OUTPUT);
 
-	// Pin used to keep charger/booster active.
-// if (_configuration->useChargerKey)
-// {
-// 	_chargerKeyBlinker.begin();
-// 	_chargerKeyBlinker.setPins(LOW);
-// 	delay(_configuration->startupChargerDelay);
-// 	_chargerKeyBlinker.setPins(HIGH);
-// }
-	
 	// We are going to do some work, so make sure the "ready" indicator light is off.
 	readyIndicatorLightOff();
+
+	_shiftRegister.set(AUDIO::UG, HIGH);
+	_shiftRegister.set(AUDIO::RESET, HIGH);
+	_shiftRegister.set(AUDIO::STATECHANGE, HIGH);
+	_shiftRegister.set(AUDIO::ON, HIGH);
 
 	// Audio set up.
 	// Set up the levels we want to use.
@@ -164,11 +159,6 @@ void NaquadahGenerator::update()
 			break;
 		}
 	}
-
-// 	if (_configuration->useChargerKey)
-// 	{
-// 		_chargerKeyBlinker.update();
-// 	}
 }
 
 Configuration* NaquadahGenerator::getConfiguration()
@@ -451,7 +441,11 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 	_generatorState = state;
 
 	// The state changes when a hall sensor is trigger, we want to make a sound to go with this event.
-	_vsUart.playFile("ACTIVATEOGG");
+	// bool playResult = _vsUart.playFile("STATECHGOGG");
+	// debugPrint("State change play: ", DEBUGLEVEL::STANDARD);
+	// debugPrintLn((int)playResult, DEBUGLEVEL::STANDARD)
+	_shiftRegister.set(AUDIO::ON, HIGH);
+	_shiftRegister.set(AUDIO::STATECHANGE, LOW);
 	
 	// For the case of switching between PRIMED1 and ON, we don't want to turn off the red lights then turn
 	// them back on.  Doing so might cause a flicker.  Therefore, we don't call reset when switching between
@@ -493,7 +487,10 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 			// This will turn on the first light and start the timer.
 			incrementCurrentBlueLight();
 
-			//_vsUart.playFile(F("ON      OGG"));
+			delay(120);
+			_shiftRegister.set(AUDIO::STATECHANGE, HIGH);
+			_shiftRegister.set(AUDIO::ON, LOW);
+			//_vsUart.playFile(F("NQHGENONOGG"));
 			break;
 		}
 
@@ -503,6 +500,9 @@ void NaquadahGenerator::setGeneratorState(GENERATOR::STATE state)
 			break;
 		}
 	}
+
+	delay(120);
+	_shiftRegister.set(AUDIO::STATECHANGE, HIGH);
 }
 
 void NaquadahGenerator::setSpecialMode(GENERATOR::SPECIALMODE specialMode)
@@ -590,7 +590,6 @@ void NaquadahGenerator::runSpecialMode()
 	{
 		case GENERATOR::SPECIALMODEOFF:
 		{
-
 			break;
 		}
 
