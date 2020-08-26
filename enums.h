@@ -76,10 +76,12 @@ namespace AUDIO
 {
 	enum SHIFTREGISTER
 	{
-		UG = LIGHT::READY + 1,
-		RESET,
+		RESET			= LIGHT::READY + 1,
+		LATCH,
+		ON,
+		RANDOM,
+		UG,
 		STATECHANGE,
-		ON
 	};
 }
 
