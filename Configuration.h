@@ -14,6 +14,7 @@
 
 	https://creativecommons.org/licenses/by-nc/4.0/legalcode
 */
+
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
