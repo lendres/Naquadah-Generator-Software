@@ -102,8 +102,7 @@ void NaquadahGenerator::update()
 	// Check the current state.
 	GENERATOR::STATE newState = getGeneratorState();
 
-	// If the current state is different than the set one, we update everything.  Otherwise, we
-	// don't update to save time.
+	// If the current state is different than the set one, we update everything.  Otherwise, we don't update to save time.
 	if (newState != _generatorState)
 	{
 		setGeneratorState(newState);
